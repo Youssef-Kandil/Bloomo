@@ -1,0 +1,545 @@
+// Bloomo — Field Service Management
+// Prisma schema (MySQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+  CLIENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskType {
+  COLLECTION
+  SUPPLY
+  INSTALL
+  SUPPLY_INSTALL
+  INSPECTION
+  MAINTENANCE
+  REPAIR
+  OTHER
+}
+
+enum RequestType {
+  MAINTENANCE
+  INSPECTION
+  REPAIR
+  SUPPLY
+  INSTALL
+  SUPPLY_INSTALL
+}
+
+enum RequestStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendanceType {
+  CHECK_IN
+  CHECK_OUT
+}
+
+enum AttendanceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TreasuryKind {
+  INCOME
+  EXPENSE
+}
+
+enum WaSessionStatus {
+  DISCONNECTED
+  PAIRING
+  CONNECTED
+}
+
+enum WaHealthState {
+  HEALTHY
+  THROTTLED
+  BANNED_SUSPECTED
+}
+
+enum WaTemplate {
+  OTP_VERIFY
+  ORDER_RECEIVED
+  TECH_ASSIGNED
+  ETA
+  COMPLETED
+  GREETING
+  BROADCAST
+  CUSTOM
+  EMP_OTP_VERIFY
+  EMP_TASK_ASSIGNED
+  EMP_TOOL_CUSTODY
+  EMP_INVENTORY_CUSTODY
+}
+
+enum WaMessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum OtpPurpose {
+  CLIENT_PHONE_VERIFY
+  EMPLOYEE_PHONE_VERIFY
+  LOGIN_2FA
+}
+
+// ---------- Core ----------
+
+model Company {
+  id           String   @id @default(cuid())
+  name         String
+  ownerAdminId String   @unique
+  owner        User     @relation("CompanyOwner", fields: [ownerAdminId], references: [id])
+  createdAt    DateTime @default(now())
+
+  users            User[]            @relation("CompanyUsers")
+  branches         Branch[]
+  clients          Client[]
+  tools            Tool[]
+  inventoryItems   InventoryItem[]
+  tasks            Task[]
+  requests         Request[]
+  treasuryEntries  TreasuryEntry[]
+  whatsappSession  WhatsappSession?
+  whatsappMessages WhatsappMessage[]
+}
+
+model Branch {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  address   String?
+  lat       Float?
+  lng       Float?
+  phones    Json    @default("[]")
+
+  employees Employee[]
+
+  @@index([companyId])
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String
+  role               Role
+  companyId          String?
+  company            Company?  @relation("CompanyUsers", fields: [companyId], references: [id])
+  name               String
+  avatar             String?
+  active             Boolean   @default(true)
+  whatsappPhone      String?
+  whatsappVerifiedAt DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  ownedCompany        Company?          @relation("CompanyOwner")
+  employee            Employee?
+  clientProfile       Client?           @relation("ClientAccount")
+  permissions         Permission[]      @relation("ManagerPermissions")
+  refreshTokens       RefreshToken[]
+  auditLogs           AuditLog[]
+  assignmentsMade     Assignment[]      @relation("AssignedBy")
+  tasksAssigned       Task[]            @relation("TaskAssignee")
+  tasksCreated        Task[]            @relation("TaskCreatedBy")
+  attendanceDecisions Attendance[]      @relation("AttendanceDecider")
+  ratingsRecorded     Rating[]          @relation("RatingRecorder")
+  treasuryCreated     TreasuryEntry[]   @relation("TreasuryCreator")
+  whatsappSent        WhatsappMessage[] @relation("WhatsappSender")
+
+  @@index([companyId, role])
+}
+
+model Permission {
+  id        String  @id @default(cuid())
+  managerId String
+  manager   User    @relation("ManagerPermissions", fields: [managerId], references: [id], onDelete: Cascade)
+  screenKey String
+  canView   Boolean @default(false)
+  canEdit   Boolean @default(false)
+
+  @@unique([managerId, screenKey])
+}
+
+model Employee {
+  id           String    @id
+  user         User      @relation(fields: [id], references: [id], onDelete: Cascade)
+  branchId     String?
+  branch       Branch?   @relation(fields: [branchId], references: [id])
+  currentLat   Float?
+  currentLng   Float?
+  lastPingAt   DateTime?
+
+  toolCustody    ToolAssignment[]
+  assignments    Assignment[]
+  attendance     Attendance[]
+  locationPings  LocationPing[]
+
+  @@index([branchId])
+}
+
+// ---------- Clients ----------
+
+model Client {
+  id              String   @id @default(cuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  accountUserId   String?  @unique
+  accountUser     User?    @relation("ClientAccount", fields: [accountUserId], references: [id])
+  name            String
+  note            String?  @db.Text
+  address         String
+  lat             Float
+  lng             Float
+  marketingOptIn  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  phones   ClientPhone[]
+  requests Request[]
+  ratings  Rating[]
+  tasks    Task[]
+
+  @@index([companyId])
+}
+
+model ClientPhone {
+  id                 String    @id @default(cuid())
+  clientId           String
+  client             Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  label              String
+  phone              String
+  isWhatsapp         Boolean   @default(false)
+  whatsappVerifiedAt DateTime?
+
+  @@index([clientId])
+  @@index([phone])
+}
+
+// ---------- Tools & Inventory ----------
+
+model Tool {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  code      String
+  qty       Int     @default(0)
+
+  assignments ToolAssignment[]
+
+  @@unique([companyId, code])
+}
+
+model ToolAssignment {
+  id         String    @id @default(cuid())
+  toolId     String
+  tool       Tool      @relation(fields: [toolId], references: [id])
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  qty        Int
+  assignedAt DateTime  @default(now())
+  returnedAt DateTime?
+
+  @@index([employeeId])
+  @@index([toolId])
+}
+
+model InventoryItem {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  sku       String
+  type      String?
+  icon      String?
+  qty       Int     @default(0)
+  unitPrice Float   @default(0)
+
+  requestCustody RequestCustody[]
+
+  @@unique([companyId, sku])
+}
+
+// ---------- Requests ----------
+
+model Request {
+  id        String        @id @default(cuid())
+  companyId String
+  company   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    Client        @relation(fields: [clientId], references: [id])
+  type      RequestType
+  note      String?       @db.Text
+  status    RequestStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  assignments Assignment[]
+  custody     RequestCustody[]
+  ratings     Rating[]
+  history     RequestHistory[]
+
+  @@index([companyId, status])
+  @@index([clientId])
+  @@index([createdAt])
+}
+
+model Assignment {
+  id              String    @id @default(cuid())
+  requestId       String
+  request         Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee  @relation(fields: [employeeId], references: [id])
+  plannedStart    DateTime
+  plannedEnd      DateTime
+  actualStart     DateTime?
+  actualEnd       DateTime?
+  finishNote      String?   @db.Text
+  assignedByUserId String
+  assignedBy      User      @relation("AssignedBy", fields: [assignedByUserId], references: [id])
+  createdAt       DateTime  @default(now())
+
+  @@index([requestId])
+  @@index([employeeId, actualStart])
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title       String
+  description String?      @db.Text
+  status      TaskStatus   @default(PENDING)
+  priority    TaskPriority @default(MEDIUM)
+  type        TaskType
+  clientId    String?
+  client      Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  plannedStart DateTime?
+  plannedEnd   DateTime?
+  actualStart  DateTime?
+  actualEnd    DateTime?
+  assigneeId  String
+  assignee    User         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdById String
+  createdBy   User         @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([companyId, status])
+  @@index([assigneeId, status])
+  @@index([clientId])
+}
+
+model RequestCustody {
+  id              String        @id @default(cuid())
+  requestId       String
+  request         Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  qty             Int
+  unitPrice       Float
+  total           Float
+
+  @@index([requestId])
+}
+
+model Rating {
+  id              String   @id @default(cuid())
+  requestId       String
+  request         Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id])
+  stars           Int
+  note            String?  @db.Text
+  recordedByUserId String?
+  recordedBy      User?    @relation("RatingRecorder", fields: [recordedByUserId], references: [id])
+  createdAt       DateTime @default(now())
+
+  @@index([clientId])
+  @@index([requestId])
+}
+
+model RequestHistory {
+  id        String   @id @default(cuid())
+  requestId String
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  event     String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([requestId, createdAt])
+}
+
+// ---------- Attendance ----------
+
+model Attendance {
+  id              String           @id @default(cuid())
+  employeeId      String
+  employee        Employee         @relation(fields: [employeeId], references: [id])
+  type            AttendanceType
+  requestedAt     DateTime
+  status          AttendanceStatus @default(PENDING)
+  decidedByUserId String?
+  decidedBy       User?            @relation("AttendanceDecider", fields: [decidedByUserId], references: [id])
+  decidedAt       DateTime?
+  rejectReason    String?          @db.Text
+  createdAt       DateTime         @default(now())
+
+  @@index([employeeId, requestedAt])
+  @@index([status])
+}
+
+// ---------- Tracking ----------
+
+model LocationPing {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  lat        Float
+  lng        Float
+  createdAt  DateTime @default(now())
+
+  @@index([employeeId, createdAt])
+}
+
+// ---------- Treasury & Audit ----------
+
+model TreasuryEntry {
+  id              String       @id @default(cuid())
+  companyId       String
+  company         Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  kind            TreasuryKind
+  amount          Float
+  reason          String
+  requestId       String?
+  createdByUserId String
+  createdBy       User         @relation("TreasuryCreator", fields: [createdByUserId], references: [id])
+  createdAt       DateTime     @default(now())
+
+  @@index([companyId, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  target    String?
+  meta      Json?
+  ip        String?
+  ua        String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action])
+}
+
+// ---------- Auth tokens ----------
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ---------- WhatsApp ----------
+
+model WhatsappSession {
+  id                String          @id @default(cuid())
+  companyId         String          @unique
+  company           Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status            WaSessionStatus @default(DISCONNECTED)
+  healthState       WaHealthState   @default(HEALTHY)
+  phoneNumber       String?
+  lastQrAt          DateTime?
+  lastQrCode        String?         @db.Text
+  connectedAt       DateTime?
+  lastSeenAt        DateTime?
+  dailySentCount    Int             @default(0)
+  dailyWindowStart  DateTime?
+  throttledUntil    DateTime?
+  updatedAt         DateTime        @updatedAt
+}
+
+model WhatsappMessage {
+  id            String          @id @default(cuid())
+  companyId     String
+  company       Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  clientId      String?
+  requestId     String?
+  toPhone       String
+  body          String          @db.Text
+  template      WaTemplate
+  status        WaMessageStatus @default(QUEUED)
+  externalId    String?         @unique
+  error         String?         @db.Text
+  sentByUserId  String?
+  sentBy        User?           @relation("WhatsappSender", fields: [sentByUserId], references: [id])
+  createdAt     DateTime        @default(now())
+  sentAt        DateTime?
+  deliveredAt   DateTime?
+  readAt        DateTime?
+
+  @@index([companyId, status])
+  @@index([companyId, createdAt])
+  @@index([clientId])
+}
+
+model OtpCode {
+  id          String     @id @default(cuid())
+  channel     String     @default("WHATSAPP")
+  purpose     OtpPurpose
+  targetPhone String
+  codeHash    String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  attempts    Int        @default(0)
+  relatedId   String?
+  createdAt   DateTime   @default(now())
+
+  @@index([targetPhone, purpose])
+  @@index([expiresAt])
+}

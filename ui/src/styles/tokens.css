@@ -1,0 +1,82 @@
+/**
+ * Design tokens — modern shadcn-compatible palette using HSL.
+ * Keep legacy RGB tokens around for any component still referencing them.
+ */
+:root {
+  /* shadcn HSL tokens */
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 238 84% 67%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted-bg: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --accent-bg: 160 84% 39%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 350 89% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+  --border-hsl: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 238 84% 67%;
+  --radius: 0.75rem;
+
+  /* Legacy RGB tokens (kept for back-compat with existing utility classes) */
+  --color-primary: 99 102 241;
+  --color-primary-fg: 255 255 255;
+  --color-accent: 16 185 129;
+  --color-success: 34 197 94;
+  --color-warning: 245 158 11;
+  --color-danger: 244 63 94;
+  --color-bg: 248 250 252;
+  --color-surface: 255 255 255;
+  --color-muted: 241 245 249;
+  --color-border: 226 232 240;
+  --color-fg: 15 23 42;
+  --color-fg-muted: 100 116 139;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --font-sans: 'Inter', 'Cairo', system-ui, sans-serif;
+}
+
+[data-theme='dark'] {
+  --background: 222 47% 5%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 234 89% 74%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 217 33% 17%;
+  --secondary-foreground: 210 40% 98%;
+  --muted-bg: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+  --accent-bg: 160 84% 45%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 350 89% 65%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 71% 50%;
+  --warning: 38 92% 55%;
+  --border-hsl: 217 33% 20%;
+  --input: 217 33% 20%;
+  --ring: 234 89% 74%;
+
+  --color-primary: 129 140 248;
+  --color-primary-fg: 15 23 42;
+  --color-accent: 52 211 153;
+  --color-bg: 2 6 23;
+  --color-surface: 15 23 42;
+  --color-muted: 30 41 59;
+  --color-border: 51 65 85;
+  --color-fg: 241 245 249;
+  --color-fg-muted: 148 163 184;
+}

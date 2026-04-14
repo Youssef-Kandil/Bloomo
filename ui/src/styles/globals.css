@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import './tokens.css';
+
+@layer base {
+  html,
+  body {
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-fg));
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  [dir='rtl'] .flip-x {
+    transform: scaleX(-1);
+  }
+
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.2);
+    color: hsl(var(--foreground));
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border-hsl));
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium
+           transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
+           focus-visible:ring-offset-background;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-primary-fg hover:opacity-90 hover:shadow-glow active:scale-[0.98];
+  }
+  .btn-ghost {
+    @apply btn hover:bg-muted text-fg;
+  }
+  .btn-danger {
+    @apply btn bg-danger text-white hover:opacity-90 active:scale-[0.98];
+  }
+
+  .input {
+    @apply w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg
+           placeholder:text-fg-muted transition-colors
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-fg;
+  }
+  .card {
+    @apply rounded-lg border border-border bg-surface p-4 shadow-soft;
+  }
+
+  .glass {
+    @apply bg-surface/70 backdrop-blur-xl border border-border/60;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted-bg)) 0%,
+      hsl(var(--muted-bg) / 0.6) 50%,
+      hsl(var(--muted-bg)) 100%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+}
+
+/* Leaflet z-index fix — placed OUTSIDE @layer base so it takes precedence
+   over leaflet.css (which is imported per-component after globals). */
+.leaflet-container {
+  position: relative !important;
+  z-index: 0 !important;
+  isolation: isolate;
+}
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom,
+.leaflet-tile-pane,
+.leaflet-overlay-pane,
+.leaflet-shadow-pane,
+.leaflet-marker-pane,
+.leaflet-tooltip-pane,
+.leaflet-popup-pane,
+.leaflet-control {
+  z-index: 1 !important;
+}
+
+/* Custom map markers / tooltips */
+.bloomo-avatar-marker {
+  background: transparent !important;
+  border: 0 !important;
+}
+.bloomo-name-tooltip {
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+  border: 1px solid hsl(var(--border-hsl)) !important;
+  border-radius: 8px !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+  white-space: nowrap !important;
+}
+.bloomo-name-tooltip::before {
+  border-top-color: hsl(var(--border-hsl)) !important;
+}
