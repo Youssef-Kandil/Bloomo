@@ -32,6 +32,19 @@ export const tasksModel = {
     });
   },
 
+  listMyStandaloneTasks(employeeId: string) {
+    return prisma.task.findMany({
+      where: {
+        assigneeId: employeeId,
+        status: { notIn: ['COMPLETED', 'CANCELED'] },
+      },
+      include: {
+        client: { select: { id: true, name: true, address: true, lat: true, lng: true } },
+      },
+      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+    });
+  },
+
   /* Standalone tasks */
 
   taskInclude: {

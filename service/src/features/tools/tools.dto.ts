@@ -9,9 +9,10 @@ export const createToolDto = z.object({
 export const updateToolDto = createToolDto.partial();
 
 export const assignCustodyDto = z.object({
-  toolId: z.string().cuid(),
-  employeeId: z.string().cuid(),
+  toolId: z.string().min(1),
+  employeeId: z.string().min(1),
   qty: z.number().int().min(1),
+  note: z.string().trim().max(500).optional(),
 });
 
 export type CreateToolInput = z.infer<typeof createToolDto>;

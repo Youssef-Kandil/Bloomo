@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import { useMemo, useState, type ComponentType } from 'react';
+import { toast } from 'sonner';
 
 import { DetailDrawer, DetailRow } from '@/components/shared/DetailDrawer';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -38,9 +39,11 @@ import { useMe } from '@/hooks/queries/auth';
 import { useClients } from '@/hooks/queries/clients';
 import {
   TASK_TYPES,
+  useApproveCollection,
   useCompanyUsers,
   useCreateTask,
   useDeleteTask,
+  useRejectCollection,
   useTasks,
   useUpdateTask,
   type CreateTaskInput,
@@ -58,7 +61,13 @@ type DrawerState =
   | { mode: 'edit'; task: Task }
   | null;
 
-const STATUSES: TaskStatus[] = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELED'];
+const STATUSES: TaskStatus[] = [
+  'PENDING',
+  'IN_PROGRESS',
+  'PENDING_APPROVAL',
+  'COMPLETED',
+  'CANCELED',
+];
 const PRIORITIES: TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
 
 const STATUS_META: Record<
@@ -67,6 +76,11 @@ const STATUS_META: Record<
 > = {
   PENDING: { labelKey: 'tasks.pending', icon: CircleDashed, className: 'text-muted-foreground' },
   IN_PROGRESS: { labelKey: 'tasks.inProgress', icon: PlayCircle, className: 'text-[hsl(var(--warning))]' },
+  PENDING_APPROVAL: {
+    labelKey: 'tasks.pendingApproval',
+    icon: CircleDashed,
+    className: 'text-[hsl(var(--warning))]',
+  },
   COMPLETED: { labelKey: 'tasks.completed', icon: CheckCircle2, className: 'text-[hsl(var(--success))]' },
   CANCELED: { labelKey: 'tasks.canceled', icon: X, className: 'text-destructive' },
 };
@@ -108,6 +122,8 @@ export default function TasksPage() {
   const createMut = useCreateTask();
   const updateMut = useUpdateTask();
   const deleteMut = useDeleteTask();
+  const approveMut = useApproveCollection();
+  const rejectMut = useRejectCollection();
 
   const [drawer, setDrawer] = useState<DrawerState>(null);
 
@@ -246,6 +262,32 @@ export default function TasksPage() {
               onSuccess: (t) => setDrawer({ mode: 'view', task: t }),
             })
           }
+          onApprove={() =>
+            approveMut.mutate(drawer.task.id, {
+              onSuccess: (t) => {
+                toast.success(t ? t.title : 'OK');
+                setDrawer(null);
+              },
+              onError: (err: unknown) => {
+                const msg =
+                  (err as { response?: { data?: { error?: { message?: string } } } })?.response
+                    ?.data?.error?.message ?? 'Failed';
+                toast.error(msg);
+              },
+            })
+          }
+          onReject={() =>
+            rejectMut.mutate(drawer.task.id, {
+              onSuccess: (t) => setDrawer({ mode: 'view', task: t }),
+              onError: (err: unknown) => {
+                const msg =
+                  (err as { response?: { data?: { error?: { message?: string } } } })?.response
+                    ?.data?.error?.message ?? 'Failed';
+                toast.error(msg);
+              },
+            })
+          }
+          approving={approveMut.isPending || rejectMut.isPending}
         />
       )}
     </motion.div>
@@ -373,6 +415,12 @@ function TaskRow({
               {task.plannedEnd && ` → ${new Date(task.plannedEnd).toLocaleDateString()}`}
             </span>
           )}
+          {task.type === 'COLLECTION' && task.collectionAmount != null && (
+            <span className="flex items-center gap-1 font-mono text-primary font-medium">
+              <CoinsIcon className="size-3" />
+              {task.collectionAmount.toLocaleString()}
+            </span>
+          )}
         </div>
       </div>
 
@@ -461,6 +509,9 @@ function TaskViewDrawer({
   onDelete,
   deleting,
   onStatusChange,
+  onApprove,
+  onReject,
+  approving,
 }: {
   task: Task;
   onClose: () => void;
@@ -468,10 +519,15 @@ function TaskViewDrawer({
   onDelete: () => Promise<void>;
   deleting: boolean;
   onStatusChange: (status: TaskStatus) => void;
+  onApprove: () => void;
+  onReject: () => void;
+  approving: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const meta = STATUS_META[task.status];
   const StatusIcon = meta.icon;
+  const isPendingApproval = task.status === 'PENDING_APPROVAL';
+  const isCollection = task.type === 'COLLECTION';
 
   return (
     <DetailDrawer
@@ -517,6 +573,20 @@ function TaskViewDrawer({
             <span className="whitespace-pre-wrap text-start">{task.description}</span>
           </DetailRow>
         )}
+        {task.collectionAmount != null && (
+          <DetailRow label={t('tasks.collectionAmount')}>
+            <span className="font-mono font-semibold text-primary">
+              {task.collectionAmount.toLocaleString()}
+            </span>
+          </DetailRow>
+        )}
+        {task.approvedAt && (
+          <DetailRow label={t('tasks.approvedAt')}>
+            <span className="whitespace-nowrap">
+              {new Date(task.approvedAt).toLocaleString()}
+            </span>
+          </DetailRow>
+        )}
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3">
@@ -533,22 +603,60 @@ function TaskViewDrawer({
         />
       </div>
 
+      {isCollection && isPendingApproval && (
+        <div className="mt-6 rounded-lg border border-[hsl(var(--warning)/0.4)] bg-[hsl(var(--warning)/0.08)] p-3 text-xs">
+          {t('tasks.approvalHint')}
+        </div>
+      )}
+
+      {isCollection && !isPendingApproval && task.status !== 'COMPLETED' && (
+        <div className="mt-6 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+          {t('tasks.collectionWaitEmployee')}
+        </div>
+      )}
+
       <div className="mt-6 flex gap-2 flex-wrap">
-        {task.status !== 'IN_PROGRESS' && task.status !== 'COMPLETED' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onStatusChange('IN_PROGRESS')}
-          >
-            <PlayCircle className="size-4" />
-            {t('tasks.markInProgress')}
-          </Button>
-        )}
-        {task.status !== 'COMPLETED' && (
-          <Button size="sm" onClick={() => onStatusChange('COMPLETED')}>
-            <CheckCircle2 className="size-4" />
-            {t('tasks.markComplete')}
-          </Button>
+        {isCollection && isPendingApproval ? (
+          <>
+            <Button size="sm" onClick={onApprove} disabled={approving}>
+              <CheckCircle2 className="size-4" />
+              {t('tasks.approve')}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onReject}
+              disabled={approving}
+            >
+              <X className="size-4" />
+              {t('tasks.reject')}
+            </Button>
+          </>
+        ) : isCollection ? (
+          // Collection tasks cannot be force-completed by admin/manager; they
+          // must go through the approval flow triggered by the employee.
+          null
+        ) : (
+          <>
+            {task.status !== 'IN_PROGRESS' &&
+              task.status !== 'COMPLETED' &&
+              task.status !== 'PENDING_APPROVAL' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onStatusChange('IN_PROGRESS')}
+                >
+                  <PlayCircle className="size-4" />
+                  {t('tasks.markInProgress')}
+                </Button>
+              )}
+            {task.status !== 'COMPLETED' && task.status !== 'PENDING_APPROVAL' && (
+              <Button size="sm" onClick={() => onStatusChange('COMPLETED')}>
+                <CheckCircle2 className="size-4" />
+                {t('tasks.markComplete')}
+              </Button>
+            )}
+          </>
         )}
       </div>
     </DetailDrawer>
@@ -590,6 +698,9 @@ function TaskFormDrawer({
     initial?.assignee.id ?? defaultAssigneeId ?? '',
   );
   const [clientId, setClientId] = useState<string>(initial?.client?.id ?? '');
+  const [collectionAmount, setCollectionAmount] = useState<string>(
+    initial?.collectionAmount != null ? String(initial.collectionAmount) : '',
+  );
   const [plannedStart, setPlannedStart] = useState(
     initial?.plannedStart ? toDatetimeLocal(new Date(initial.plannedStart)) : '',
   );
@@ -597,10 +708,19 @@ function TaskFormDrawer({
     initial?.plannedEnd ? toDatetimeLocal(new Date(initial.plannedEnd)) : '',
   );
 
+  const isCollection = type === 'COLLECTION';
+  const amountNum = Number(collectionAmount);
+  const amountValid = !isCollection || (Number.isFinite(amountNum) && amountNum > 0);
+  const clientOk = !isCollection || clientId.length > 0;
   const plannedRangeOk =
     !plannedStart || !plannedEnd || new Date(plannedEnd) >= new Date(plannedStart);
   const canSubmit =
-    titleVal.trim().length >= 2 && assigneeId.length > 0 && type !== '' && plannedRangeOk;
+    titleVal.trim().length >= 2 &&
+    assigneeId.length > 0 &&
+    type !== '' &&
+    clientOk &&
+    amountValid &&
+    plannedRangeOk;
 
   async function submit(): Promise<void> {
     if (type === '') return;
@@ -611,6 +731,7 @@ function TaskFormDrawer({
       type,
       assigneeId,
       clientId: clientId || null,
+      collectionAmount: isCollection ? amountNum : undefined,
       plannedStart: plannedStart ? new Date(plannedStart).toISOString() : null,
       plannedEnd: plannedEnd ? new Date(plannedEnd).toISOString() : null,
     });
@@ -768,7 +889,10 @@ function TaskFormDrawer({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="task-client">{t('tasks.clientOptional')}</Label>
+            <Label htmlFor="task-client">
+              {isCollection ? t('tasks.client') : t('tasks.clientOptional')}
+              {isCollection && <span className="text-destructive ms-1">*</span>}
+            </Label>
             <select
               id="task-client"
               value={clientId}
@@ -784,6 +908,27 @@ function TaskFormDrawer({
             </select>
           </div>
         </div>
+
+        {isCollection && (
+          <div className="space-y-2">
+            <Label htmlFor="task-collection-amount">
+              {t('tasks.collectionAmount')}
+              <span className="text-destructive ms-1">*</span>
+            </Label>
+            <Input
+              id="task-collection-amount"
+              type="number"
+              min={0}
+              step="any"
+              value={collectionAmount}
+              onChange={(e) => setCollectionAmount(e.target.value)}
+              placeholder="0"
+            />
+            {!amountValid && collectionAmount !== '' && (
+              <p className="text-xs text-destructive">{t('tasks.collectionAmountInvalid')}</p>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">

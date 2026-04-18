@@ -23,6 +23,7 @@ enum Role {
 enum TaskStatus {
   PENDING
   IN_PROGRESS
+  PENDING_APPROVAL
   COMPLETED
   CANCELED
 }
@@ -128,6 +129,10 @@ model Company {
   owner        User     @relation("CompanyOwner", fields: [ownerAdminId], references: [id])
   createdAt    DateTime @default(now())
 
+  // Payroll defaults
+  standardWorkingDaysPerMonth Int   @default(26)
+  overtimeMultiplier          Float @default(1.5)
+
   users            User[]            @relation("CompanyUsers")
   branches         Branch[]
   clients          Client[]
@@ -138,6 +143,11 @@ model Company {
   treasuryEntries  TreasuryEntry[]
   whatsappSession  WhatsappSession?
   whatsappMessages WhatsappMessage[]
+  supplyOps        SupplyOperation[]
+  offDayRequests   OffDayAttendanceRequest[]
+  overtimeRequests OvertimeRequest[]
+  leaveRequests    LeaveRequest[]
+  salaryAdvances   SalaryAdvance[]
 }
 
 model Branch {
@@ -151,6 +161,7 @@ model Branch {
   phones    Json    @default("[]")
 
   employees Employee[]
+  managers  User[]    @relation("ManagerBranch")
 
   @@index([companyId])
 }
@@ -162,6 +173,8 @@ model User {
   role               Role
   companyId          String?
   company            Company?  @relation("CompanyUsers", fields: [companyId], references: [id])
+  branchId           String?
+  branch             Branch?   @relation("ManagerBranch", fields: [branchId], references: [id])
   name               String
   avatar             String?
   active             Boolean   @default(true)
@@ -169,6 +182,7 @@ model User {
   whatsappVerifiedAt DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
 
   ownedCompany        Company?          @relation("CompanyOwner")
   employee            Employee?
@@ -183,6 +197,13 @@ model User {
   ratingsRecorded     Rating[]          @relation("RatingRecorder")
   treasuryCreated     TreasuryEntry[]   @relation("TreasuryCreator")
   whatsappSent        WhatsappMessage[] @relation("WhatsappSender")
+  supplyOpsAsEmployee SupplyOperation[] @relation("SupplyOpEmployee")
+  supplyOpsCreated    SupplyOperation[] @relation("SupplyOpCreator")
+  tasksApproved       Task[]            @relation("TaskApprover")
+  offDayDecisions     OffDayAttendanceRequest[] @relation("OffDayDecider")
+  overtimeDecisions   OvertimeRequest[]         @relation("OvertimeDecider")
+  leaveDecisions      LeaveRequest[]            @relation("LeaveDecider")
+  advanceDecisions    SalaryAdvance[]           @relation("AdvanceDecider")
 
   @@index([companyId, role])
 }
@@ -193,7 +214,10 @@ model Permission {
   manager   User    @relation("ManagerPermissions", fields: [managerId], references: [id], onDelete: Cascade)
   screenKey String
   canView   Boolean @default(false)
+  canCreate Boolean @default(false)
   canEdit   Boolean @default(false)
+  canDelete Boolean @default(false)
+  canAssign Boolean @default(false)
 
   @@unique([managerId, screenKey])
 }
@@ -206,6 +230,21 @@ model Employee {
   currentLat   Float?
   currentLng   Float?
   lastPingAt   DateTime?
+
+  // Schedule — "HH:mm" 24-hour format; offDays is a JSON array of weekday numbers (0=Sunday … 6=Saturday)
+  checkInTime            String?
+  checkOutTime           String?
+  offDays                Json    @default("[5,6]")
+
+  // Payroll
+  monthlySalary          Float   @default(0)
+  overtimeRateOverride   Float?
+  offDayHourRateOverride Float?
+
+  offDayRequests         OffDayAttendanceRequest[]
+  overtimeRequests       OvertimeRequest[]
+  leaveRequests          LeaveRequest[]
+  salaryAdvances         SalaryAdvance[]
 
   toolCustody    ToolAssignment[]
   assignments    Assignment[]
@@ -235,6 +274,7 @@ model Client {
   requests Request[]
   ratings  Rating[]
   tasks    Task[]
+  supplyOps SupplyOperation[]
 
   @@index([companyId])
 }
@@ -274,6 +314,7 @@ model ToolAssignment {
   employeeId String
   employee   Employee  @relation(fields: [employeeId], references: [id])
   qty        Int
+  note       String?
   assignedAt DateTime  @default(now())
   returnedAt DateTime?
 
@@ -292,7 +333,8 @@ model InventoryItem {
   qty       Int     @default(0)
   unitPrice Float   @default(0)
 
-  requestCustody RequestCustody[]
+  requestCustody  RequestCustody[]
+  supplyOpItems   SupplyOperationItem[]
 
   @@unique([companyId, sku])
 }
@@ -359,12 +401,57 @@ model Task {
   assignee    User         @relation("TaskAssignee", fields: [assigneeId], references: [id])
   createdById String
   createdBy   User         @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  operationId String?
+  operation   SupplyOperation? @relation(fields: [operationId], references: [id], onDelete: SetNull)
+  collectionAmount Float?
+  approvedAt       DateTime?
+  approvedById     String?
+  approvedBy       User?        @relation("TaskApprover", fields: [approvedById], references: [id], onDelete: SetNull)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   @@index([companyId, status])
   @@index([assigneeId, status])
   @@index([clientId])
+  @@index([operationId])
+}
+
+model SupplyOperation {
+  id            String    @id @default(cuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId    String
+  employee      User      @relation("SupplyOpEmployee", fields: [employeeId], references: [id])
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  needsInstall  Boolean   @default(false)
+  invoiceAmount Float?
+  isDeferred    Boolean   @default(false)
+  paidAt        DateTime?
+  note          String?   @db.Text
+  createdById   String
+  createdBy     User      @relation("SupplyOpCreator", fields: [createdById], references: [id])
+  createdAt     DateTime  @default(now())
+
+  items SupplyOperationItem[]
+  tasks Task[]
+
+  @@index([companyId, createdAt])
+  @@index([employeeId])
+  @@index([clientId])
+}
+
+model SupplyOperationItem {
+  id              String          @id @default(cuid())
+  operationId     String
+  operation       SupplyOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  inventoryItem   InventoryItem   @relation(fields: [inventoryItemId], references: [id])
+  qty             Int
+  unitPrice       Float
+
+  @@index([operationId])
+  @@index([inventoryItemId])
 }
 
 model RequestCustody {
@@ -424,6 +511,94 @@ model Attendance {
 
   @@index([employeeId, requestedAt])
   @@index([status])
+}
+
+model OffDayAttendanceRequest {
+  id              String           @id @default(cuid())
+  companyId       String
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date            DateTime
+  reason          String?          @db.Text
+  status          AttendanceStatus @default(PENDING)
+  decidedByUserId String?
+  decidedBy       User?            @relation("OffDayDecider", fields: [decidedByUserId], references: [id])
+  decidedAt       DateTime?
+  createdAt       DateTime         @default(now())
+
+  @@unique([employeeId, date])
+  @@index([companyId, status])
+}
+
+/// Employee requests to work overtime (after auto check-out) on a given day.
+/// Approved overtime adds hours that payroll picks up at the overtime rate.
+model OvertimeRequest {
+  id              String           @id @default(cuid())
+  companyId       String
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date            DateTime         // day of overtime
+  startAt         DateTime         // requested start
+  endAt           DateTime         // requested end
+  reason          String?          @db.Text
+  status          AttendanceStatus @default(PENDING)
+  decidedByUserId String?
+  decidedBy       User?            @relation("OvertimeDecider", fields: [decidedByUserId], references: [id])
+  decidedAt       DateTime?
+  rejectReason    String?          @db.Text
+  createdAt       DateTime         @default(now())
+
+  @@index([companyId, status])
+  @@index([employeeId, date])
+}
+
+/// Employee requests a leave (one or more days). Approved leaves do not
+/// produce attendance deductions for the covered days.
+model LeaveRequest {
+  id              String           @id @default(cuid())
+  companyId       String
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  fromDate        DateTime
+  toDate          DateTime
+  reason          String?          @db.Text
+  status          AttendanceStatus @default(PENDING)
+  decidedByUserId String?
+  decidedBy       User?            @relation("LeaveDecider", fields: [decidedByUserId], references: [id])
+  decidedAt       DateTime?
+  rejectReason    String?          @db.Text
+  createdAt       DateTime         @default(now())
+
+  @@index([companyId, status])
+  @@index([employeeId, fromDate])
+}
+
+/// Employee requests a cash advance on salary. On approval, a treasury
+/// EXPENSE entry is created and payroll deducts the advance from net pay
+/// for that month.
+model SalaryAdvance {
+  id              String           @id @default(cuid())
+  companyId       String
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  amount          Float
+  reason          String?          @db.Text
+  appliedYear     Int              // which month the advance applies to
+  appliedMonth    Int              // 1..12
+  status          AttendanceStatus @default(PENDING)
+  decidedByUserId String?
+  decidedBy       User?            @relation("AdvanceDecider", fields: [decidedByUserId], references: [id])
+  decidedAt       DateTime?
+  rejectReason    String?          @db.Text
+  treasuryEntryId String?          @unique
+  createdAt       DateTime         @default(now())
+
+  @@index([companyId, status])
+  @@index([employeeId, appliedYear, appliedMonth])
 }
 
 // ---------- Tracking ----------

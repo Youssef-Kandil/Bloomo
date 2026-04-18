@@ -30,6 +30,11 @@ export const tasksController = {
     res.json({ tasks });
   },
 
+  async mineStandalone(req: Request, res: Response): Promise<void> {
+    const tasks = await tasksService.myStandaloneTasks(employeeId(req));
+    res.json({ tasks });
+  },
+
   async start(req: Request, res: Response): Promise<void> {
     const assignment = await tasksService.start(
       employeeId(req),
@@ -69,6 +74,7 @@ export const tasksController = {
       companyId(req),
       param(req, 'id'),
       req.body as UpdateTaskInput,
+      req.user?.id,
     );
     res.json({ task });
   },
@@ -76,5 +82,32 @@ export const tasksController = {
   async remove(req: Request, res: Response): Promise<void> {
     await tasksService.deleteTask(companyId(req), param(req, 'id'));
     res.status(204).end();
+  },
+
+  async employeeComplete(req: Request, res: Response): Promise<void> {
+    const task = await tasksService.employeeComplete(
+      companyId(req),
+      param(req, 'id'),
+      employeeId(req),
+    );
+    res.json({ task });
+  },
+
+  async approveCollection(req: Request, res: Response): Promise<void> {
+    const task = await tasksService.approveCollection(
+      companyId(req),
+      param(req, 'id'),
+      req.user!.id,
+    );
+    res.json({ task });
+  },
+
+  async rejectCollection(req: Request, res: Response): Promise<void> {
+    const task = await tasksService.rejectCollection(
+      companyId(req),
+      param(req, 'id'),
+      req.user!.id,
+    );
+    res.json({ task });
   },
 };

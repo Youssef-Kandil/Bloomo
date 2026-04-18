@@ -10,7 +10,7 @@ export const requestTypeSchema = z.enum([
 ]);
 
 export const createRequestDto = z.object({
-  clientId: z.string().cuid(),
+  clientId: z.string().min(1),
   type: requestTypeSchema,
   note: z.string().trim().max(2000).optional(),
 });
@@ -21,14 +21,14 @@ export const clientSelfRequestDto = z.object({
 });
 
 export const assignRequestDto = z.object({
-  employeeId: z.string().cuid(),
+  employeeId: z.string().min(1),
   plannedStart: z.coerce.date(),
   plannedEnd: z.coerce.date(),
 });
 
 export const listRequestsDto = z.object({
   status: z.enum(['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).optional(),
-  clientId: z.string().cuid().optional(),
+  clientId: z.string().min(1).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });

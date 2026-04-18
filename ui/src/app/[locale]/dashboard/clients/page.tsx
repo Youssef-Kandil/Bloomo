@@ -1,9 +1,11 @@
 'use client';
 
+import axios from 'axios';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import {
+  FileText,
   KeyRound,
   Mail,
   MapPin,
@@ -16,6 +18,7 @@ import {
   UserSquare2,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import { LocationPicker } from '@/components/map/LocationPicker';
 import { DetailDrawer, DetailRow } from '@/components/shared/DetailDrawer';
@@ -39,6 +42,7 @@ import {
   type ClientInput,
   type ClientPhone,
 } from '@/hooks/queries/clients';
+import { useMarkSupplyPaid, useSupplyOperations } from '@/hooks/queries/supply';
 import { useReverseGeocode } from '@/hooks/useReverseGeocode';
 import { cn } from '@/lib/utils';
 
@@ -318,7 +322,77 @@ function ClientViewDrawer({
           />
         </div>
       </div>
+
+      <ClientDeferredInvoices clientId={client.id} />
     </DetailDrawer>
+  );
+}
+
+function ClientDeferredInvoices({ clientId }: { clientId: string }): React.ReactElement | null {
+  const t = useTranslations();
+  const ops = useSupplyOperations({ clientId, status: 'deferred' });
+  const markPaidMut = useMarkSupplyPaid();
+
+  if (ops.isLoading) return null;
+  const list = ops.data ?? [];
+  if (list.length === 0) return null;
+
+  const total = list.reduce((sum, o) => sum + (o.invoiceAmount ?? 0), 0);
+
+  return (
+    <div className="mt-6 space-y-2">
+      <h3 className="flex items-center justify-between text-sm font-semibold">
+        <span className="flex items-center gap-2">
+          <FileText className="size-4 text-primary" />
+          {t('clients.deferredInvoices')}
+        </span>
+        <span className="font-mono text-primary">{total.toLocaleString()}</span>
+      </h3>
+      <div className="rounded-lg border border-border divide-y divide-border">
+        {list.map((op) => (
+          <div key={op.id} className="px-3 py-2 space-y-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-mono text-xs text-muted-foreground">
+                {new Date(op.createdAt).toLocaleDateString()}
+              </span>
+              <span className="font-mono font-semibold">
+                {op.invoiceAmount?.toLocaleString()}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {op.items.map((it) => `${it.inventoryItem.name}×${it.qty}`).join(' · ')}
+            </p>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">
+                {t('inventory.employee')}: {op.employee.name}
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await markPaidMut.mutateAsync(op.id);
+                    toast.success(t('inventory.collectDeferredSuccess'));
+                  } catch (err) {
+                    if (axios.isAxiosError(err)) {
+                      toast.error(
+                        (err.response?.data as { message?: string } | undefined)?.message ??
+                          err.message,
+                      );
+                    } else {
+                      toast.error(String(err));
+                    }
+                  }
+                }}
+                disabled={markPaidMut.isPending}
+                className="text-xs text-primary hover:underline disabled:opacity-50"
+              >
+                {t('inventory.collectDeferred')}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

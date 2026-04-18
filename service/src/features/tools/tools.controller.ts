@@ -1,10 +1,11 @@
 import type { Request, Response } from 'express';
 
+import type { AssignCustodyInput, CreateToolInput, UpdateToolInput } from './tools.dto';
+import { toolsService } from './tools.service';
+
 import { AppError } from '@/lib/http-error';
 import { param } from '@/utils/reqParams';
 
-import { toolsService } from './tools.service';
-import type { AssignCustodyInput, CreateToolInput, UpdateToolInput } from './tools.dto';
 
 function companyId(req: Request): string {
   const id = req.user?.companyId;
@@ -33,6 +34,9 @@ export const toolsController = {
   },
   async myCustody(req: Request, res: Response): Promise<void> {
     res.json({ custody: await toolsService.listCustody(req.user!.id) });
+  },
+  async listCustody(req: Request, res: Response): Promise<void> {
+    res.json({ custody: await toolsService.listActiveCustody(companyId(req)) });
   },
   async return(req: Request, res: Response): Promise<void> {
     res.json({ assignment: await toolsService.return(param(req, 'id')) });

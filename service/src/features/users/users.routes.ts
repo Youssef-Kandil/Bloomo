@@ -40,3 +40,4 @@ usersRouter.patch(
   validate(updateUserDto),
   asyncHandler(usersController.update),
 );
+usersRouter.delete('/:id', requireRole('ADMIN'), asyncHandler(usersController.remove));

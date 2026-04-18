@@ -6,7 +6,8 @@ export const permissionsService = {
     return permissionsModel.listForManager(managerId);
   },
   upsert(input: UpsertPermissionInput) {
-    return permissionsModel.upsert(input.managerId, input.screenKey, input.canView, input.canEdit);
+    const { managerId, screenKey, ...flags } = input;
+    return permissionsModel.upsert(managerId, screenKey, flags);
   },
   bulk(input: BulkUpsertInput) {
     return permissionsModel.bulkUpsert(input.managerId, input.screens);

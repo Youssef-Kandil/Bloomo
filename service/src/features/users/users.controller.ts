@@ -45,4 +45,8 @@ export const usersController = {
   async update(req: Request, res: Response): Promise<void> {
     res.json({ user: await usersService.update(param(req, 'id'), req.body as UpdateUserInput) });
   },
+  async remove(req: Request, res: Response): Promise<void> {
+    await usersService.softDelete(param(req, 'id'), companyId(req));
+    res.status(204).end();
+  },
 };

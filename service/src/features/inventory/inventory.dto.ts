@@ -12,11 +12,11 @@ export const createItemDto = z.object({
 export const updateItemDto = createItemDto.partial();
 
 export const requestCustodyDto = z.object({
-  requestId: z.string().cuid(),
+  requestId: z.string().min(1),
   items: z
     .array(
       z.object({
-        inventoryItemId: z.string().cuid(),
+        inventoryItemId: z.string().min(1),
         qty: z.number().int().min(1),
         unitPrice: z.number().min(0),
       }),

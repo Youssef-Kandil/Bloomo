@@ -11,6 +11,7 @@ import {
   Clock,
   Wallet,
   MessageCircle,
+  Banknote,
   Settings,
   PlusCircle,
   type LucideIcon,
@@ -38,6 +39,7 @@ export const SCREENS: readonly ScreenDef[] = [
   { key: 'requests', labelKey: 'nav.requests', href: '/dashboard/requests', icon: Inbox },
   { key: 'attendance', labelKey: 'nav.attendance', href: '/dashboard/attendance', icon: Clock },
   { key: 'treasury', labelKey: 'nav.treasury', href: '/dashboard/treasury', icon: Wallet },
+  { key: 'payroll', labelKey: 'nav.payroll', href: '/dashboard/payroll', icon: Banknote },
   { key: 'whatsapp', labelKey: 'nav.whatsapp', href: '/dashboard/whatsapp', icon: MessageCircle },
   { key: 'settings', labelKey: 'nav.settings', href: '/dashboard/settings', icon: Settings },
 ] as const;
@@ -45,10 +47,33 @@ export const SCREENS: readonly ScreenDef[] = [
 export const EMPLOYEE_SCREENS = new Set(['attendance', 'my-tasks', 'settings']);
 export const CLIENT_SCREENS = new Set(['new-request', 'settings']);
 
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'assign';
+
+/** Which actions are meaningful per screen. `view` is always implicit. */
+export const SCREEN_ACTIONS: Record<string, readonly PermissionAction[]> = {
+  overview: ['view'],
+  company: ['view', 'create', 'edit', 'delete'],
+  inventory: ['view', 'create', 'edit', 'delete'],
+  employees: ['view', 'create', 'edit', 'delete'],
+  clients: ['view', 'create', 'edit', 'delete'],
+  permissions: ['view', 'edit'],
+  tasks: ['view', 'create', 'edit', 'delete', 'assign'],
+  tools: ['view', 'create', 'edit', 'delete', 'assign'],
+  requests: ['view', 'create', 'edit', 'delete', 'assign'],
+  attendance: ['view', 'edit'],
+  treasury: ['view', 'create', 'edit', 'delete'],
+  payroll: ['view', 'edit'],
+  whatsapp: ['view', 'edit'],
+  settings: ['view', 'edit'],
+};
+
 export interface ManagerPermission {
   screenKey: string;
   canView: boolean;
+  canCreate: boolean;
   canEdit: boolean;
+  canDelete: boolean;
+  canAssign: boolean;
 }
 
 export function visibleScreens(
@@ -72,7 +97,7 @@ export function visibleScreens(
     ];
   }
 
-  // MANAGER — filter by granted permissions
-  const allowed = new Set(managerPermissions.filter((p) => p.canView || p.canEdit).map((p) => p.screenKey));
+  // MANAGER — a screen is visible if canView is granted for it
+  const allowed = new Set(managerPermissions.filter((p) => p.canView).map((p) => p.screenKey));
   return SCREENS.filter((s) => allowed.has(s.key));
 }

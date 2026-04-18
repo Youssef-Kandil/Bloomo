@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import {
+  Clock,
   Mail,
   MapPin,
   Phone,
@@ -305,6 +306,8 @@ export default function EmployeesPage() {
             )}
           </div>
 
+          <EmployeeScheduleSummary employee={drawer.employee} />
+
           {/* Location map */}
           <div className="mt-6 space-y-2">
             <h3 className="flex items-center gap-2 text-sm font-semibold">
@@ -392,23 +395,32 @@ function CreateDrawer({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [schedule, setSchedule] = useState<ScheduleSalaryState>(emptyScheduleState());
 
   function reset(): void {
     setName('');
     setEmail('');
     setPassword('');
     setWhatsappPhone('');
+    setSchedule(emptyScheduleState());
   }
 
   const passwordOk = isPasswordValid(password, rules);
   const canSubmit = name.trim().length >= 2 && /@/.test(email) && passwordOk;
 
   async function submit(): Promise<void> {
+    const sched = scheduleStateToInput(schedule);
     await onSubmit({
       name: name.trim(),
       email: email.trim().toLowerCase(),
       password,
       whatsappPhone: whatsappPhone.trim() || undefined,
+      checkInTime: sched.checkInTime ?? undefined,
+      checkOutTime: sched.checkOutTime ?? undefined,
+      offDays: sched.offDays,
+      monthlySalary: sched.monthlySalary,
+      overtimeRateOverride: sched.overtimeRateOverride,
+      offDayHourRateOverride: sched.offDayHourRateOverride,
     });
     reset();
   }
@@ -458,6 +470,7 @@ function CreateDrawer({
           value={whatsappPhone}
           onChange={setWhatsappPhone}
         />
+        <ScheduleSalaryFields state={schedule} onChange={setSchedule} />
         {error && (
           <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3">
             {error}
@@ -476,12 +489,24 @@ function EditDrawer({
 }: {
   employee: Employee;
   onClose: () => void;
-  onSubmit: (patch: { name?: string; active?: boolean }) => Promise<void>;
+  onSubmit: (patch: {
+    name?: string;
+    active?: boolean;
+    checkInTime?: string | null;
+    checkOutTime?: string | null;
+    offDays?: number[];
+    monthlySalary?: number;
+    overtimeRateOverride?: number | null;
+    offDayHourRateOverride?: number | null;
+  }) => Promise<void>;
   submitting: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const [name, setName] = useState(employee.name);
   const [active, setActive] = useState(employee.active !== false);
+  const [schedule, setSchedule] = useState<ScheduleSalaryState>(
+    stateFromEmployee(employee),
+  );
 
   return (
     <DetailDrawer
@@ -490,7 +515,19 @@ function EditDrawer({
       mode="edit"
       title={t('employees.editTitle')}
       description={employee.email}
-      onSubmit={() => onSubmit({ name: name.trim(), active })}
+      onSubmit={() => {
+        const sched = scheduleStateToInput(schedule);
+        return onSubmit({
+          name: name.trim(),
+          active,
+          checkInTime: sched.checkInTime,
+          checkOutTime: sched.checkOutTime,
+          offDays: sched.offDays,
+          monthlySalary: sched.monthlySalary,
+          overtimeRateOverride: sched.overtimeRateOverride,
+          offDayHourRateOverride: sched.offDayHourRateOverride,
+        });
+      }}
       submitting={submitting}
       submitDisabled={name.trim().length < 2}
       submitLabel={t('common.save')}
@@ -521,6 +558,7 @@ function EditDrawer({
             />
           </button>
         </div>
+        <ScheduleSalaryFields state={schedule} onChange={setSchedule} />
       </div>
     </DetailDrawer>
   );
@@ -553,4 +591,268 @@ function TextField({
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
+}
+
+interface ScheduleSalaryState {
+  checkInTime: string;
+  checkOutTime: string;
+  offDays: number[];
+  monthlySalary: string;
+  overtimeRateOverride: string;
+  offDayHourRateOverride: string;
+}
+
+function emptyScheduleState(): ScheduleSalaryState {
+  return {
+    checkInTime: '',
+    checkOutTime: '',
+    offDays: [5, 6],
+    monthlySalary: '0',
+    overtimeRateOverride: '',
+    offDayHourRateOverride: '',
+  };
+}
+
+function stateFromEmployee(e: Employee): ScheduleSalaryState {
+  return {
+    checkInTime: e.employee?.checkInTime ?? '',
+    checkOutTime: e.employee?.checkOutTime ?? '',
+    offDays: e.employee?.offDays ?? [5, 6],
+    monthlySalary: String(e.employee?.monthlySalary ?? 0),
+    overtimeRateOverride:
+      e.employee?.overtimeRateOverride != null
+        ? String(e.employee.overtimeRateOverride)
+        : '',
+    offDayHourRateOverride:
+      e.employee?.offDayHourRateOverride != null
+        ? String(e.employee.offDayHourRateOverride)
+        : '',
+  };
+}
+
+function ScheduleSalaryFields({
+  state,
+  onChange,
+}: {
+  state: ScheduleSalaryState;
+  onChange: (s: ScheduleSalaryState) => void;
+}): React.ReactElement {
+  const t = useTranslations();
+  const days = [
+    { n: 0, key: 'sun' },
+    { n: 1, key: 'mon' },
+    { n: 2, key: 'tue' },
+    { n: 3, key: 'wed' },
+    { n: 4, key: 'thu' },
+    { n: 5, key: 'fri' },
+    { n: 6, key: 'sat' },
+  ] as const;
+
+  function toggleOffDay(n: number): void {
+    const has = state.offDays.includes(n);
+    onChange({
+      ...state,
+      offDays: has ? state.offDays.filter((d) => d !== n) : [...state.offDays, n].sort(),
+    });
+  }
+
+  return (
+    <div className="space-y-4 pt-3 border-t border-border">
+      <p className="text-sm font-medium text-muted-foreground">
+        {t('employees.scheduleSalary')}
+      </p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label htmlFor="sched-in">{t('employees.checkInTime')}</Label>
+          <div className="relative">
+            <Clock className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              id="sched-in"
+              type="time"
+              value={state.checkInTime}
+              onChange={(e) => onChange({ ...state, checkInTime: e.target.value })}
+              dir="ltr"
+              className="ps-10 font-mono text-base h-11 cursor-pointer"
+              step={60}
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="sched-out">{t('employees.checkOutTime')}</Label>
+          <div className="relative">
+            <Clock className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              id="sched-out"
+              type="time"
+              value={state.checkOutTime}
+              onChange={(e) => onChange({ ...state, checkOutTime: e.target.value })}
+              dir="ltr"
+              className="ps-10 font-mono text-base h-11 cursor-pointer"
+              step={60}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>{t('employees.offDays')}</Label>
+        <div className="flex flex-wrap gap-2">
+          {days.map((d) => {
+            const active = state.offDays.includes(d.n);
+            return (
+              <button
+                key={d.n}
+                type="button"
+                onClick={() => toggleOffDay(d.n)}
+                className={cn(
+                  'rounded-md border px-3 py-1.5 text-xs transition-colors',
+                  active
+                    ? 'border-primary bg-primary/10 text-foreground'
+                    : 'border-border bg-surface hover:bg-muted',
+                )}
+              >
+                {t(`employees.day_${d.key}` as Parameters<typeof t>[0])}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="sched-salary">{t('employees.monthlySalary')}</Label>
+        <Input
+          id="sched-salary"
+          type="number"
+          min={0}
+          step="any"
+          value={state.monthlySalary}
+          onChange={(e) => onChange({ ...state, monthlySalary: e.target.value })}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label htmlFor="sched-ot-rate">{t('employees.overtimeRateOverride')}</Label>
+          <Input
+            id="sched-ot-rate"
+            type="number"
+            min={0}
+            step="any"
+            value={state.overtimeRateOverride}
+            onChange={(e) =>
+              onChange({ ...state, overtimeRateOverride: e.target.value })
+            }
+            placeholder={t('employees.autoCalculated')}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="sched-off-rate">{t('employees.offDayRateOverride')}</Label>
+          <Input
+            id="sched-off-rate"
+            type="number"
+            min={0}
+            step="any"
+            value={state.offDayHourRateOverride}
+            onChange={(e) =>
+              onChange({ ...state, offDayHourRateOverride: e.target.value })
+            }
+            placeholder={t('employees.autoCalculated')}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+
+function EmployeeScheduleSummary({ employee }: { employee: Employee }): React.ReactElement | null {
+  const t = useTranslations();
+  const emp = employee.employee;
+  const hasSchedule = !!emp?.checkInTime || !!emp?.checkOutTime;
+  const hasPayroll =
+    (emp?.monthlySalary ?? 0) > 0 ||
+    emp?.overtimeRateOverride != null ||
+    emp?.offDayHourRateOverride != null;
+
+  if (!emp || (!hasSchedule && !hasPayroll && (emp.offDays?.length ?? 0) === 0)) {
+    return null;
+  }
+
+  return (
+    <div className="mt-6 space-y-3">
+      <h3 className="flex items-center gap-2 text-sm font-semibold">
+        {t('employees.scheduleSalary')}
+      </h3>
+      <div className="space-y-1">
+        {emp.checkInTime && (
+          <DetailRow label={t('employees.checkInTime')}>
+            <span className="font-mono" dir="ltr">
+              {emp.checkInTime}
+            </span>
+          </DetailRow>
+        )}
+        {emp.checkOutTime && (
+          <DetailRow label={t('employees.checkOutTime')}>
+            <span className="font-mono" dir="ltr">
+              {emp.checkOutTime}
+            </span>
+          </DetailRow>
+        )}
+        {emp.offDays && emp.offDays.length > 0 && (
+          <DetailRow label={t('employees.offDays')}>
+            <div className="flex flex-wrap gap-1 justify-end">
+              {emp.offDays.map((d) => (
+                <Badge key={d} variant="outline" className="text-xs">
+                  {t(`employees.day_${DAY_KEYS[d]}` as Parameters<typeof t>[0])}
+                </Badge>
+              ))}
+            </div>
+          </DetailRow>
+        )}
+        {(emp.monthlySalary ?? 0) > 0 && (
+          <DetailRow label={t('employees.monthlySalary')}>
+            <span className="font-mono font-semibold">
+              {(emp.monthlySalary ?? 0).toLocaleString()}
+            </span>
+          </DetailRow>
+        )}
+        {emp.overtimeRateOverride != null && (
+          <DetailRow label={t('employees.overtimeRateOverride')}>
+            <span className="font-mono">{emp.overtimeRateOverride.toLocaleString()}</span>
+          </DetailRow>
+        )}
+        {emp.offDayHourRateOverride != null && (
+          <DetailRow label={t('employees.offDayRateOverride')}>
+            <span className="font-mono">{emp.offDayHourRateOverride.toLocaleString()}</span>
+          </DetailRow>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function scheduleStateToInput(s: ScheduleSalaryState): {
+  checkInTime?: string | null;
+  checkOutTime?: string | null;
+  offDays?: number[];
+  monthlySalary?: number;
+  overtimeRateOverride?: number | null;
+  offDayHourRateOverride?: number | null;
+} {
+  const salaryNum = Number(s.monthlySalary);
+  const otNum = s.overtimeRateOverride.trim() === '' ? null : Number(s.overtimeRateOverride);
+  const offNum =
+    s.offDayHourRateOverride.trim() === '' ? null : Number(s.offDayHourRateOverride);
+  return {
+    checkInTime: s.checkInTime || null,
+    checkOutTime: s.checkOutTime || null,
+    offDays: s.offDays,
+    monthlySalary: Number.isFinite(salaryNum) && salaryNum >= 0 ? salaryNum : 0,
+    overtimeRateOverride:
+      otNum === null ? null : Number.isFinite(otNum) && otNum >= 0 ? otNum : null,
+    offDayHourRateOverride:
+      offNum === null ? null : Number.isFinite(offNum) && offNum >= 0 ? offNum : null,
+  };
 }

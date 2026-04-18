@@ -4,7 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
 
-export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
+export type TaskStatus =
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'PENDING_APPROVAL'
+  | 'COMPLETED'
+  | 'CANCELED';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 export type TaskType =
   | 'COLLECTION'
@@ -58,6 +63,9 @@ export interface Task {
   assignee: TaskUser;
   createdBy: TaskUser;
   client: TaskClient | null;
+  collectionAmount: number | null;
+  operationId: string | null;
+  approvedAt: string | null;
 }
 
 interface TaskList {
@@ -96,6 +104,7 @@ export interface CreateTaskInput {
   type: TaskType;
   assigneeId: string;
   clientId?: string | null;
+  collectionAmount?: number;
   plannedStart?: string | null;
   plannedEnd?: string | null;
 }
@@ -117,6 +126,7 @@ export interface UpdateTaskInput {
   status?: TaskStatus;
   assigneeId?: string;
   clientId?: string | null;
+  collectionAmount?: number | null;
   plannedStart?: string | null;
   plannedEnd?: string | null;
   actualStart?: string | null;
@@ -138,6 +148,37 @@ export function useDeleteTask() {
     mutationFn: async (id: string) => {
       await api.delete(`/api/tasks/${id}`);
     },
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export function useApproveCollection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      (await api.post<{ task: Task }>(`/api/tasks/${id}/approve-collection`)).data.task,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: ['supply'] });
+      qc.invalidateQueries({ queryKey: ['treasury'] });
+    },
+  });
+}
+
+export function useRejectCollection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      (await api.post<{ task: Task }>(`/api/tasks/${id}/reject-collection`)).data.task,
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export function useEmployeeCompleteTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      (await api.post<{ task: Task }>(`/api/tasks/${id}/complete`)).data.task,
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 }

@@ -1,9 +1,11 @@
 'use client';
 
+import axios from 'axios';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
-import { Package, Plus, Search } from 'lucide-react';
+import { Package, Plus, Search, Truck, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import { DetailDrawer, DetailRow } from '@/components/shared/DetailDrawer';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +14,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icon, IconPicker } from '@/components/ui/icon-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { useClients } from '@/hooks/queries/clients';
+import { useEmployees } from '@/hooks/queries/employees';
 import {
   useCreateItem,
   useDeleteItem,
@@ -20,12 +25,45 @@ import {
   type InventoryItem,
   type ItemInput,
 } from '@/hooks/queries/inventory';
+import {
+  useCreateSupplyOperation,
+  useDeleteSupplyOperation,
+  useMarkSupplyPaid,
+  useSupplyOperations,
+  type CreateSupplyInput,
+  type SupplyFilters,
+  type SupplyOperation,
+} from '@/hooks/queries/supply';
 
 type DrawerState =
   | { mode: 'create' }
   | { mode: 'view'; item: InventoryItem }
   | { mode: 'edit'; item: InventoryItem }
+  | { mode: 'supply' }
+  | { mode: 'viewOperation'; operation: SupplyOperation }
   | null;
+
+function errorMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    return (err.response?.data as { message?: string } | undefined)?.message ?? err.message;
+  }
+  return err instanceof Error ? err.message : String(err);
+}
+
+function statusKey(status: string): string {
+  switch (status) {
+    case 'PENDING':
+      return 'pending';
+    case 'IN_PROGRESS':
+      return 'inProgress';
+    case 'COMPLETED':
+      return 'completed';
+    case 'CANCELED':
+      return 'canceled';
+    default:
+      return 'pending';
+  }
+}
 
 export default function InventoryPage() {
   const t = useTranslations();
@@ -36,6 +74,20 @@ export default function InventoryPage() {
 
   const [drawer, setDrawer] = useState<DrawerState>(null);
   const [query, setQuery] = useState('');
+
+  const [opFilters, setOpFilters] = useState<SupplyFilters>({});
+
+  const operations = useSupplyOperations(opFilters);
+  const employees = useEmployees();
+  const clients = useClients();
+  const supplyMut = useCreateSupplyOperation();
+  const deleteOpMut = useDeleteSupplyOperation();
+  const markPaidMut = useMarkSupplyPaid();
+
+  const activeEmployees = useMemo(
+    () => (employees.data?.items ?? []).filter((e) => e.active !== false),
+    [employees.data],
+  );
 
   const filtered = useMemo(() => {
     const items = list.data?.items ?? [];
@@ -73,10 +125,16 @@ export default function InventoryPage() {
             {list.data?.items?.length ?? 0} · {t('inventory.totalValue')}: {total.toLocaleString()}
           </p>
         </div>
-        <Button variant="gradient" onClick={() => setDrawer({ mode: 'create' })}>
-          <Plus className="size-4" />
-          {t('common.create')}
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setDrawer({ mode: 'supply' })}>
+            <Truck className="size-4" />
+            {t('inventory.supply')}
+          </Button>
+          <Button variant="gradient" onClick={() => setDrawer({ mode: 'create' })}>
+            <Plus className="size-4" />
+            {t('common.create')}
+          </Button>
+        </div>
       </motion.header>
 
       <motion.div variants={item}>
@@ -229,6 +287,325 @@ export default function InventoryPage() {
           </div>
         </DetailDrawer>
       )}
+
+      {drawer?.mode === 'supply' && (
+        <SupplyDrawer
+          open
+          onClose={() => setDrawer(null)}
+          items={list.data?.items ?? []}
+          employees={activeEmployees}
+          employeesLoading={employees.isLoading}
+          clients={clients.data?.items ?? []}
+          clientsLoading={clients.isLoading}
+          onSubmit={async (input) => {
+            try {
+              await supplyMut.mutateAsync(input);
+              toast.success(t('inventory.supplySuccess'));
+              setDrawer(null);
+            } catch (err) {
+              toast.error(errorMessage(err));
+              throw err;
+            }
+          }}
+          submitting={supplyMut.isPending}
+        />
+      )}
+
+      {drawer?.mode === 'viewOperation' && (
+        <DetailDrawer
+          open
+          onOpenChange={(o) => !o && setDrawer(null)}
+          mode="view"
+          title={t('inventory.operationDetails')}
+          description={`${drawer.operation.client.name} · ${drawer.operation.employee.name}`}
+          onDelete={async () => {
+            if (!confirm(t('inventory.confirmDeleteOperation'))) return;
+            try {
+              await deleteOpMut.mutateAsync(drawer.operation.id);
+              toast.success(t('inventory.deleteOperationSuccess'));
+              setDrawer(null);
+            } catch (err) {
+              toast.error(errorMessage(err));
+            }
+          }}
+          deleting={deleteOpMut.isPending}
+          deleteLabel={t('common.delete')}
+        >
+          <div className="space-y-1">
+            <DetailRow label={t('inventory.client')}>
+              <span className="font-medium">{drawer.operation.client.name}</span>
+            </DetailRow>
+            <DetailRow label={t('inventory.employee')}>
+              <div className="flex flex-col items-end">
+                <span className="font-medium">{drawer.operation.employee.name}</span>
+                <span className="text-xs text-muted-foreground font-mono">
+                  {drawer.operation.employee.email}
+                </span>
+              </div>
+            </DetailRow>
+            <DetailRow label={t('inventory.createdAt')}>
+              <span className="whitespace-nowrap">
+                {new Date(drawer.operation.createdAt).toLocaleString(undefined, {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </DetailRow>
+            <DetailRow label={t('tasks.type')}>
+              <Badge variant="outline">
+                {drawer.operation.needsInstall
+                  ? t('tasks.typeSUPPLY_INSTALL')
+                  : t('tasks.typeSUPPLY')}
+              </Badge>
+            </DetailRow>
+            {drawer.operation.note && (
+              <DetailRow label={t('inventory.supplyNote')}>
+                <span className="whitespace-pre-wrap">{drawer.operation.note}</span>
+              </DetailRow>
+            )}
+          </div>
+
+          <div className="mt-5 space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">
+              {t('inventory.supplyItems')}
+            </p>
+            <div className="rounded-lg border border-border divide-y divide-border">
+              {drawer.operation.items.map((it) => (
+                <div
+                  key={it.id}
+                  className="flex items-center justify-between px-3 py-2 text-sm"
+                >
+                  <div>
+                    <span className="font-medium">{it.inventoryItem.name}</span>
+                    <span className="ms-2 text-xs text-muted-foreground font-mono">
+                      {it.inventoryItem.sku}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-muted-foreground text-xs">
+                      ×{it.qty}
+                    </span>
+                    <span className="font-mono text-xs">
+                      {(it.qty * it.unitPrice).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {drawer.operation.invoiceAmount !== null && (
+            <div className="mt-5 space-y-1">
+              <DetailRow label={t('inventory.invoiceAmount')}>
+                <span className="font-mono font-semibold">
+                  {drawer.operation.invoiceAmount.toLocaleString()}
+                </span>
+              </DetailRow>
+              <DetailRow label={t('common.status')}>
+                {drawer.operation.paidAt ? (
+                  <Badge>{t('inventory.paid')}</Badge>
+                ) : drawer.operation.isDeferred ? (
+                  <Badge variant="outline">{t('inventory.deferred')}</Badge>
+                ) : (
+                  <Badge variant="outline">{t('inventory.unpaid')}</Badge>
+                )}
+              </DetailRow>
+              {drawer.operation.paidAt && (
+                <DetailRow label={t('inventory.paid')}>
+                  <span className="whitespace-nowrap">
+                    {new Date(drawer.operation.paidAt).toLocaleString()}
+                  </span>
+                </DetailRow>
+              )}
+              {!drawer.operation.paidAt && (
+                <div className="pt-3">
+                  <Button
+                    type="button"
+                    variant="gradient"
+                    className="w-full"
+                    disabled={markPaidMut.isPending}
+                    onClick={async () => {
+                      try {
+                        await markPaidMut.mutateAsync(drawer.operation.id);
+                        toast.success(t('inventory.collectDeferredSuccess'));
+                        setDrawer(null);
+                      } catch (err) {
+                        toast.error(errorMessage(err));
+                      }
+                    }}
+                  >
+                    {t('inventory.collectDeferred')}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {drawer.operation.tasks.length > 0 && (
+            <div className="mt-5 space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">
+                {t('nav.tasks')}
+              </p>
+              <div className="space-y-1">
+                {drawer.operation.tasks.map((tk) => (
+                  <div
+                    key={tk.id}
+                    className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
+                  >
+                    <span>{tk.title}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px]">
+                        {t(`tasks.type${tk.type}` as Parameters<typeof t>[0])}
+                      </Badge>
+                      <Badge className="text-[10px]">
+                        {t(`tasks.${statusKey(tk.status)}` as Parameters<typeof t>[0])}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </DetailDrawer>
+      )}
+
+      <motion.div variants={item}>
+        <Card>
+          <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 flex-wrap">
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="size-5 text-primary" />
+              {t('inventory.recentOperations')}
+            </CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={opFilters.status ?? ''}
+                onChange={(e) =>
+                  setOpFilters((f) => ({
+                    ...f,
+                    status: (e.target.value || undefined) as SupplyFilters['status'],
+                  }))
+                }
+                className="rounded-md border border-input bg-background px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">{t('inventory.filterStatus')}: {t('inventory.filterAll')}</option>
+                <option value="paid">{t('inventory.paid')}</option>
+                <option value="unpaid">{t('inventory.unpaid')}</option>
+                <option value="deferred">{t('inventory.deferred')}</option>
+                <option value="noInvoice">{t('inventory.statusNoInvoice')}</option>
+              </select>
+              <select
+                value={opFilters.employeeId ?? ''}
+                onChange={(e) =>
+                  setOpFilters((f) => ({ ...f, employeeId: e.target.value || undefined }))
+                }
+                className="rounded-md border border-input bg-background px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">{t('inventory.filterEmployee')}: {t('inventory.filterAll')}</option>
+                {activeEmployees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={opFilters.clientId ?? ''}
+                onChange={(e) =>
+                  setOpFilters((f) => ({ ...f, clientId: e.target.value || undefined }))
+                }
+                className="rounded-md border border-input bg-background px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">{t('inventory.filterClient')}: {t('inventory.filterAll')}</option>
+                {(clients.data?.items ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {(opFilters.status || opFilters.employeeId || opFilters.clientId) && (
+                <Button size="sm" variant="ghost" onClick={() => setOpFilters({})}>
+                  {t('inventory.resetFilters')}
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {operations.isLoading ? (
+              <div className="p-6 space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-14 rounded-lg shimmer" />
+                ))}
+              </div>
+            ) : (operations.data?.length ?? 0) === 0 ? (
+              <p className="p-8 text-sm text-muted-foreground text-center">
+                {t('inventory.noOperations')}
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+                    <tr>
+                      <th className="text-start font-medium px-5 py-3">
+                        {t('inventory.client')}
+                      </th>
+                      <th className="text-start font-medium px-5 py-3">
+                        {t('inventory.employee')}
+                      </th>
+                      <th className="text-start font-medium px-5 py-3">
+                        {t('inventory.supplyItems')}
+                      </th>
+                      <th className="text-end font-medium px-5 py-3">
+                        {t('inventory.invoiceAmount')}
+                      </th>
+                      <th className="text-start font-medium px-5 py-3">{t('common.status')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {operations.data?.map((op) => (
+                      <tr
+                        key={op.id}
+                        onClick={() => setDrawer({ mode: 'viewOperation', operation: op })}
+                        className="cursor-pointer transition-colors hover:bg-muted/50"
+                      >
+                        <td className="px-5 py-3 font-medium">{op.client.name}</td>
+                        <td className="px-5 py-3">{op.employee.name}</td>
+                        <td className="px-5 py-3 text-muted-foreground text-xs">
+                          {op.items
+                            .map((it) => `${it.inventoryItem.name}×${it.qty}`)
+                            .join(' · ')}
+                          {op.needsInstall && (
+                            <Badge variant="outline" className="ms-2 text-[10px]">
+                              {t('tasks.typeSUPPLY_INSTALL')}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-end font-mono">
+                          {op.invoiceAmount
+                            ? op.invoiceAmount.toLocaleString()
+                            : '—'}
+                        </td>
+                        <td className="px-5 py-3">
+                          {op.invoiceAmount === null ? (
+                            <Badge variant="outline">—</Badge>
+                          ) : op.paidAt ? (
+                            <Badge>{t('inventory.paid')}</Badge>
+                          ) : op.isDeferred ? (
+                            <Badge variant="outline">{t('inventory.deferred')}</Badge>
+                          ) : (
+                            <Badge variant="outline">{t('inventory.unpaid')}</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
     </motion.div>
   );
 }
@@ -376,6 +753,308 @@ function ItemFormDrawer({
               onChange={(e) => setUnitPrice(e.target.value)}
             />
           </div>
+        </div>
+      </div>
+    </DetailDrawer>
+  );
+}
+
+interface SupplyLine {
+  inventoryItemId: string;
+  qty: number;
+}
+
+function SupplyDrawer({
+  open,
+  onClose,
+  items,
+  employees,
+  employeesLoading,
+  clients,
+  clientsLoading,
+  onSubmit,
+  submitting,
+}: {
+  open: boolean;
+  onClose: () => void;
+  items: InventoryItem[];
+  employees: Array<{ id: string; name: string; email: string }>;
+  employeesLoading: boolean;
+  clients: Array<{ id: string; name: string }>;
+  clientsLoading: boolean;
+  onSubmit: (input: CreateSupplyInput) => Promise<void>;
+  submitting: boolean;
+}): React.ReactElement {
+  const t = useTranslations();
+
+  const [employeeId, setEmployeeId] = useState('');
+  const [clientId, setClientId] = useState('');
+  const [lines, setLines] = useState<SupplyLine[]>([{ inventoryItemId: '', qty: 1 }]);
+  const [needsInstall, setNeedsInstall] = useState(false);
+  const [hasInvoice, setHasInvoice] = useState(false);
+  const [invoiceAmount, setInvoiceAmount] = useState('0');
+  const [isDeferred, setIsDeferred] = useState(false);
+  const [note, setNote] = useState('');
+
+  const itemsById = useMemo(() => new Map(items.map((it) => [it.id, it])), [items]);
+
+  function updateLine(idx: number, patch: Partial<SupplyLine>): void {
+    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+  }
+
+  function addLine(): void {
+    setLines((prev) => [...prev, { inventoryItemId: '', qty: 1 }]);
+  }
+
+  function removeLine(idx: number): void {
+    setLines((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== idx)));
+  }
+
+  const linesValid = lines.every((l) => {
+    if (!l.inventoryItemId || l.qty < 1) return false;
+    const item = itemsById.get(l.inventoryItemId);
+    return item ? item.qty >= l.qty : false;
+  });
+
+  const duplicates = new Set<string>();
+  const hasDup = lines.some((l) => {
+    if (!l.inventoryItemId) return false;
+    if (duplicates.has(l.inventoryItemId)) return true;
+    duplicates.add(l.inventoryItemId);
+    return false;
+  });
+
+  const invoiceNum = Number(invoiceAmount);
+  const invoiceValid =
+    !hasInvoice || (Number.isFinite(invoiceNum) && invoiceNum > 0);
+
+  const canSubmit =
+    employeeId !== '' && clientId !== '' && linesValid && !hasDup && invoiceValid;
+
+  function reset(): void {
+    setEmployeeId('');
+    setClientId('');
+    setLines([{ inventoryItemId: '', qty: 1 }]);
+    setNeedsInstall(false);
+    setHasInvoice(false);
+    setInvoiceAmount('0');
+    setIsDeferred(false);
+    setNote('');
+  }
+
+  async function submit(): Promise<void> {
+    const trimmedNote = note.trim();
+    await onSubmit({
+      employeeId,
+      clientId,
+      items: lines.map((l) => ({ inventoryItemId: l.inventoryItemId, qty: l.qty })),
+      needsInstall,
+      invoiceAmount: hasInvoice ? invoiceNum : undefined,
+      isDeferred: hasInvoice ? isDeferred : false,
+      note: trimmedNote.length > 0 ? trimmedNote : undefined,
+    });
+    reset();
+  }
+
+  const selectClass =
+    'w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50';
+
+  return (
+    <DetailDrawer
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) {
+          reset();
+          onClose();
+        }
+      }}
+      mode="create"
+      title={t('inventory.supplyTitle')}
+      description={t('inventory.supplyDesc')}
+      onSubmit={submit}
+      submitting={submitting}
+      submitDisabled={!canSubmit}
+      submitLabel={t('inventory.supply')}
+      cancelLabel={t('common.cancel')}
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="sup-emp">
+              {t('inventory.employee')} <span className="text-destructive">*</span>
+            </Label>
+            <select
+              id="sup-emp"
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              className={selectClass}
+              disabled={employeesLoading}
+            >
+              <option value="">{employeesLoading ? t('common.loading') : '—'}</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="sup-client">
+              {t('inventory.client')} <span className="text-destructive">*</span>
+            </Label>
+            <select
+              id="sup-client"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              className={selectClass}
+              disabled={clientsLoading}
+            >
+              <option value="">{clientsLoading ? t('common.loading') : '—'}</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>{t('inventory.supplyItems')}</Label>
+            <Button type="button" size="sm" variant="outline" onClick={addLine}>
+              <Plus className="size-3" />
+              {t('inventory.addItem')}
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {lines.map((line, idx) => {
+              const selected = itemsById.get(line.inventoryItemId);
+              const outOfStock = selected ? line.qty > selected.qty : false;
+              return (
+                <div key={idx} className="flex items-start gap-2">
+                  <select
+                    value={line.inventoryItemId}
+                    onChange={(e) => updateLine(idx, { inventoryItemId: e.target.value })}
+                    className={`${selectClass} flex-1`}
+                  >
+                    <option value="">{t('inventory.selectItem')}</option>
+                    {items.map((it) => (
+                      <option key={it.id} value={it.id} disabled={it.qty < 1}>
+                        {it.name} ({it.sku}) — {it.qty}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={selected?.qty}
+                    value={String(line.qty)}
+                    onChange={(e) => updateLine(idx, { qty: Number(e.target.value) || 0 })}
+                    className="w-24"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeLine(idx)}
+                    disabled={lines.length === 1}
+                    aria-label={t('inventory.removeItem')}
+                    className="p-2 text-muted-foreground hover:text-destructive rounded-md hover:bg-destructive/10 disabled:opacity-30 disabled:hover:bg-transparent"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                  {outOfStock && (
+                    <span className="sr-only">{t('inventory.notEnoughStock')}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {hasDup && (
+            <p className="text-xs text-destructive">{t('inventory.removeItem')}</p>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-4 pt-3 border-t border-border">
+          <div>
+            <Label htmlFor="sup-install">{t('inventory.needsInstall')}</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('inventory.needsInstallDesc')}
+            </p>
+          </div>
+          <Switch
+            id="sup-install"
+            checked={needsInstall}
+            onCheckedChange={setNeedsInstall}
+            aria-label={t('inventory.needsInstall')}
+          />
+        </div>
+
+        <div className="space-y-3 pt-3 border-t border-border">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="sup-invoice-toggle">{t('inventory.hasInvoice')}</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('inventory.hasInvoiceDesc')}
+              </p>
+            </div>
+            <Switch
+              id="sup-invoice-toggle"
+              checked={hasInvoice}
+              onCheckedChange={(v) => {
+                setHasInvoice(v);
+                if (!v) {
+                  setIsDeferred(false);
+                  setInvoiceAmount('0');
+                }
+              }}
+              aria-label={t('inventory.hasInvoice')}
+            />
+          </div>
+
+          {hasInvoice && (
+            <div className="space-y-3 ps-2 border-s border-border">
+              <div className="space-y-2">
+                <Label htmlFor="sup-amount">
+                  {t('inventory.invoiceAmount')} <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="sup-amount"
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={invoiceAmount}
+                  onChange={(e) => setInvoiceAmount(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <Label htmlFor="sup-deferred">{t('inventory.isDeferred')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('inventory.isDeferredDesc')}
+                  </p>
+                </div>
+                <Switch
+                  id="sup-deferred"
+                  checked={isDeferred}
+                  onCheckedChange={setIsDeferred}
+                  aria-label={t('inventory.isDeferred')}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2 pt-3 border-t border-border">
+          <Label htmlFor="sup-note">{t('inventory.supplyNote')}</Label>
+          <textarea
+            id="sup-note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={2000}
+            rows={3}
+            placeholder={t('inventory.supplyNotePlaceholder')}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+          />
         </div>
       </div>
     </DetailDrawer>

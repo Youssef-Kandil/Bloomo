@@ -1,10 +1,25 @@
+import { prisma } from '@/config/prisma';
+import { offDayService } from '@/features/offday/offday.service';
 import { AppError } from '@/lib/http-error';
 
 import { attendanceModel } from './attendance.model';
 import type { DecideAttendanceInput, SubmitAttendanceInput } from './attendance.dto';
 
 export const attendanceService = {
-  submit(employeeId: string, input: SubmitAttendanceInput) {
+  async submit(employeeId: string, input: SubmitAttendanceInput) {
+    const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+    if (!employee) throw AppError.notFound('Employee profile not found');
+    const today = new Date();
+    const weekday = today.getUTCDay();
+    const offDays = (employee.offDays as number[] | null) ?? [];
+    if (offDays.includes(weekday)) {
+      const ok = await offDayService.hasApprovedForDate(employeeId, today);
+      if (!ok) {
+        throw AppError.forbidden(
+          'Today is your off day — submit an approved off-day attendance request first',
+        );
+      }
+    }
     return attendanceModel.create(employeeId, input.type);
   },
   listPending(companyId: string) {

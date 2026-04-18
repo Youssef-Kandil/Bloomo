@@ -19,6 +19,17 @@ export const toolsModel = {
     return prisma.toolAssignment.findMany({
       where: { employeeId, returnedAt: null },
       include: { tool: true },
+      orderBy: { assignedAt: 'desc' },
+    });
+  },
+  listActiveCustody(companyId: string) {
+    return prisma.toolAssignment.findMany({
+      where: { returnedAt: null, tool: { companyId } },
+      include: {
+        tool: { select: { id: true, name: true, code: true } },
+        employee: { select: { id: true, user: { select: { name: true, email: true } } } },
+      },
+      orderBy: { assignedAt: 'desc' },
     });
   },
   assignCustody(data: Prisma.ToolAssignmentUncheckedCreateInput) {

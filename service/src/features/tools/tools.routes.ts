@@ -1,11 +1,12 @@
 import { Router } from 'express';
 
+import { toolsController } from './tools.controller';
+import { assignCustodyDto, createToolDto, updateToolDto } from './tools.dto';
+
 import { requireRole } from '@/auth/auth.middleware';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { validate } from '@/utils/validate';
 
-import { toolsController } from './tools.controller';
-import { assignCustodyDto, createToolDto, updateToolDto } from './tools.dto';
 
 export const toolsRouter = Router();
 
@@ -28,6 +29,11 @@ toolsRouter.post(
   requireRole('ADMIN', 'MANAGER'),
   validate(assignCustodyDto),
   asyncHandler(toolsController.assign),
+);
+toolsRouter.get(
+  '/custody',
+  requireRole('ADMIN', 'MANAGER'),
+  asyncHandler(toolsController.listCustody),
 );
 toolsRouter.get('/custody/mine', requireRole('EMPLOYEE'), asyncHandler(toolsController.myCustody));
 toolsRouter.post('/custody/:id/return', requireRole('ADMIN', 'MANAGER'), asyncHandler(toolsController.return));

@@ -19,7 +19,7 @@ const broadcastBodySchema = z.object({
 const otpSendSchema = z.object({
   phone: z.string().trim().min(5).max(20),
   purpose: z.enum(['CLIENT_PHONE_VERIFY', 'EMPLOYEE_PHONE_VERIFY']),
-  relatedId: z.string().cuid(),
+  relatedId: z.string().min(1),
 });
 
 const otpVerifySchema = z.object({

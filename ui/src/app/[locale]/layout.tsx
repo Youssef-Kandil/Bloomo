@@ -1,6 +1,7 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
+import { Toaster } from 'sonner';
 
 import { routing, type Locale } from '@/i18n/routing';
 import { QueryProvider } from '@/providers/query-provider';
@@ -28,6 +29,7 @@ export default async function LocaleLayout({
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <QueryProvider>{children}</QueryProvider>
+          <Toaster richColors position="top-center" dir={dir} />
         </NextIntlClientProvider>
       </body>
     </html>

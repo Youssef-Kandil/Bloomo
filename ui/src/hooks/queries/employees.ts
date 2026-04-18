@@ -16,6 +16,13 @@ export interface Employee {
     currentLng: number | null;
     lastPingAt: string | null;
     branch?: { id: string; name: string } | null;
+    branchId?: string | null;
+    checkInTime?: string | null;
+    checkOutTime?: string | null;
+    offDays?: number[];
+    monthlySalary?: number;
+    overtimeRateOverride?: number | null;
+    offDayHourRateOverride?: number | null;
   };
 }
 
@@ -39,6 +46,12 @@ export interface CreateEmployeeInput {
   password: string;
   whatsappPhone?: string;
   branchId?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
+  offDays?: number[];
+  monthlySalary?: number;
+  overtimeRateOverride?: number | null;
+  offDayHourRateOverride?: number | null;
 }
 
 export function useCreateEmployee() {
@@ -55,6 +68,12 @@ export interface UpdateEmployeeInput {
   name?: string;
   active?: boolean;
   branchId?: string | null;
+  checkInTime?: string | null;
+  checkOutTime?: string | null;
+  offDays?: number[];
+  monthlySalary?: number;
+  overtimeRateOverride?: number | null;
+  offDayHourRateOverride?: number | null;
 }
 
 export function useUpdateEmployee() {

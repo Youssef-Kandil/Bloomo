@@ -16,6 +16,11 @@ import {
 export const tasksRouter = Router();
 
 tasksRouter.get('/mine', requireRole('EMPLOYEE'), asyncHandler(tasksController.mine));
+tasksRouter.get(
+  '/mine/standalone',
+  requireRole('EMPLOYEE'),
+  asyncHandler(tasksController.mineStandalone),
+);
 
 tasksRouter.get(
   '/',
@@ -56,4 +61,22 @@ tasksRouter.post(
   requireRole('EMPLOYEE'),
   validate(finishTaskDto),
   asyncHandler(tasksController.finish),
+);
+
+tasksRouter.post(
+  '/:id/complete',
+  requireRole('EMPLOYEE'),
+  asyncHandler(tasksController.employeeComplete),
+);
+
+tasksRouter.post(
+  '/:id/approve-collection',
+  requireRole('ADMIN', 'MANAGER'),
+  asyncHandler(tasksController.approveCollection),
+);
+
+tasksRouter.post(
+  '/:id/reject-collection',
+  requireRole('ADMIN', 'MANAGER'),
+  asyncHandler(tasksController.rejectCollection),
 );
