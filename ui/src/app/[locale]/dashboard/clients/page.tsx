@@ -22,6 +22,8 @@ import { toast } from 'sonner';
 
 import { LocationPicker } from '@/components/map/LocationPicker';
 import { DetailDrawer, DetailRow } from '@/components/shared/DetailDrawer';
+import { Pagination } from '@/components/shared/Pagination';
+import { usePagination } from '@/hooks/usePagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,6 +68,7 @@ export default function ClientsPage() {
   const [drawer, setDrawer] = useState<DrawerState>(null);
 
   const items = list.data?.items ?? [];
+  const clientsPg = usePagination(items);
 
   const container = {
     hidden: { opacity: 0 },
@@ -121,7 +124,7 @@ export default function ClientsPage() {
               <p className="p-8 text-sm text-muted-foreground text-center">{t('clients.empty')}</p>
             ) : (
               <ul className="divide-y divide-border">
-                {items.map((c, i) => {
+                {clientsPg.paginated.map((c, i) => {
                   const wa = c.phones.find((p) => p.isWhatsapp);
                   return (
                     <motion.li
@@ -166,6 +169,14 @@ export default function ClientsPage() {
                 })}
               </ul>
             )}
+            <Pagination
+              page={clientsPg.page}
+              pageCount={clientsPg.pageCount}
+              onPageChange={clientsPg.setPage}
+              totalCount={clientsPg.totalCount}
+              firstIndex={clientsPg.firstIndex}
+              lastIndex={clientsPg.lastIndex}
+            />
           </CardContent>
         </Card>
       </motion.div>

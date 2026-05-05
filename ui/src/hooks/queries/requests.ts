@@ -66,6 +66,12 @@ export interface RankedCandidate {
   withinStartRadius: boolean;
   total: number;
   isFresh: boolean;
+  /** Today's first APPROVED check-in (ISO) — null if not checked-in. */
+  checkedInAt: string | null;
+  /** Today's last APPROVED check-out (ISO) — null if still on duty. */
+  checkedOutAt: string | null;
+  /** True iff checked-in today AND not checked-out yet (assignable). */
+  isOnDuty: boolean;
 }
 
 export function useRanking(requestId: string) {

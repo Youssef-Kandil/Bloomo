@@ -84,6 +84,33 @@ export const requestsService = {
       throw AppError.notFound('One or more employees not found');
     }
 
+    // Guard: only employees who are checked-in today AND haven't checked-out
+    // can be assigned. Mirrors the on-duty rule shown in the UI.
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setHours(23, 59, 59, 999);
+    const todays = await prisma.attendance.findMany({
+      where: {
+        employeeId: { in: validEmployees.map((e) => e.id) },
+        status: 'APPROVED',
+        requestedAt: { gte: dayStart, lte: dayEnd },
+      },
+      select: { employeeId: true, type: true },
+    });
+    const offDuty: string[] = [];
+    for (const emp of validEmployees) {
+      const ids = todays.filter((a) => a.employeeId === emp.id);
+      const checkedIn = ids.some((a) => a.type === 'CHECK_IN');
+      const checkedOut = ids.some((a) => a.type === 'CHECK_OUT');
+      if (!checkedIn || checkedOut) offDuty.push(emp.user.name);
+    }
+    if (offDuty.length > 0) {
+      throw AppError.badRequest(
+        `Employees not on duty (must be checked-in and not checked-out today): ${offDuty.join(', ')}`,
+      );
+    }
+
     const plannedStart = input.plannedStart ?? new Date();
     const plannedEnd =
       input.plannedEnd ?? new Date(plannedStart.getTime() + 2 * 60 * 60 * 1000);

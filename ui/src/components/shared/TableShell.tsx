@@ -26,10 +26,15 @@ export function TableShell({
   className?: string;
   children: React.ReactNode;
 }): React.ReactElement {
+  // On mobile only horizontal overflow scrolls — the page scrolls naturally so
+  // we don't get nested scroll regions. The maxHeight applies only at md+.
   return (
     <div
-      className={cn('overflow-auto rounded-lg border border-border', className)}
-      style={{ maxHeight }}
+      className={cn(
+        'overflow-x-auto md:overflow-auto md:[max-height:var(--tbl-max-h)] rounded-lg border border-border',
+        className,
+      )}
+      style={{ ['--tbl-max-h' as string]: maxHeight }}
     >
       {children}
     </div>

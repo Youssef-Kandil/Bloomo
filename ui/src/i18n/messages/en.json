@@ -30,7 +30,7 @@
     "permissions": "Permissions",
     "tasks": "Tasks",
     "tools": "Equipment & tools",
-    "requests": "Service requests",
+    "requests": "Support requests",
     "attendance": "Attendance",
     "treasury": "Treasury",
     "payroll": "Payroll",
@@ -74,7 +74,24 @@
     "rejectReason": "Rejection reason",
     "searchPlaceholder": "Search by employee name…",
     "filterAllTypes": "All types",
-    "filterAllStatuses": "All statuses"
+    "filterAllStatuses": "All statuses",
+    "checkInAt": "In",
+    "checkOutAt": "Out",
+    "offDayApprovedActive": "✅ Off-day work approved for today — you can check in",
+    "overtimeApprovedActive": "✅ Overtime approved — you can check in for the extra session",
+    "forceCheckOutTitle": "Force employee check-out",
+    "forceCheckOutHint": "Employees who checked in today but haven't checked out yet. Click to record their check-out on their behalf.",
+    "forceCheckOutCta": "Check out",
+    "forceCheckOutSuccess": "Check-out recorded",
+    "noOnDuty": "No employees are currently on duty",
+    "reasons": {
+      "OFF_DAY_NEEDS_APPROVED_REQUEST": "Today is your off day — submit an off-day work request and wait for approval first.",
+      "ALREADY_CHECKED_IN": "You're already checked in for today.",
+      "NOT_CHECKED_IN": "You haven't checked in yet — cannot check out.",
+      "ALREADY_CHECKED_OUT": "You've already checked out today.",
+      "COMPLETED_NEEDS_OVERTIME_APPROVAL": "Working hours ended. Submit an overtime request and wait for approval to check in again.",
+      "OVERTIME_DAY_DONE": "Overtime session completed — no further sessions today."
+    }
   },
   "payroll": {
     "description": "Monthly salary computation based on attendance and deductions.",
@@ -314,8 +331,16 @@
     "expenseReasonPlaceholder": "e.g. Vehicle maintenance, operating costs…",
     "filterAll": "All"
   },
+  "overview": {
+    "requestsToday": "Today's open requests",
+    "requestsTodayHint": "Support requests filed today that aren't completed yet",
+    "requestsYesterday": "Yesterday's open requests",
+    "requestsYesterdayHint": "Yesterday's requests still needing follow-up",
+    "requestsEmpty": "No open requests"
+  },
   "inventory": {
     "title": "Inventory",
+    "opDate": "Date",
     "addTitle": "Add item",
     "addDesc": "Create a new inventory item.",
     "editTitle": "Edit item",
@@ -467,6 +492,13 @@
     "addPhone": "Add phone",
     "noPhones": "No phone numbers",
     "phoneInvalid": "Invalid phone number"
+  },
+  "pagination": {
+    "range": "{from}–{to} of {total}",
+    "first": "First",
+    "prev": "Previous",
+    "next": "Next",
+    "last": "Last"
   },
   "errors": {
     "notAuthorized": {
@@ -767,6 +799,9 @@
       "yes": "Yes",
       "no": "No",
       "staleLocation": "Stale location",
+      "notAvailable": "Not available",
+      "offDutyNotCheckedIn": "Hasn't checked in today — cannot assign",
+      "offDutyCheckedOut": "Already checked out — cannot assign",
       "pointsLine": "Score {total}/10 · distance {distance} + rating {rating}",
       "sort": {
         "recommended": "System recommended",

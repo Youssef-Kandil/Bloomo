@@ -114,13 +114,13 @@ export function useSystemOverview() {
   });
 }
 
-export function useSystemCompanies(search?: string, page = 1) {
+export function useSystemCompanies(search?: string, page = 1, pageSize = 10) {
   return useQuery({
-    queryKey: systemKeys.companies(search, page),
+    queryKey: [...systemKeys.companies(search, page), pageSize],
     queryFn: async () => {
       const res = await api.get<{ items: CompanyRow[]; total: number; page: number; pageSize: number }>(
         '/api/system/companies',
-        { params: { search, page } },
+        { params: { search, page, pageSize } },
       );
       return res.data;
     },
@@ -184,13 +184,13 @@ export function useSetCompanyLimits(companyId: string) {
   });
 }
 
-export function useSystemUsers(search?: string, role?: string, page = 1) {
+export function useSystemUsers(search?: string, role?: string, page = 1, pageSize = 10) {
   return useQuery({
-    queryKey: systemKeys.users(search, role, page),
+    queryKey: [...systemKeys.users(search, role, page), pageSize],
     queryFn: async () => {
       const res = await api.get<{ items: UserRow[]; total: number; page: number; pageSize: number }>(
         '/api/system/users',
-        { params: { search, role, page } },
+        { params: { search, role, page, pageSize } },
       );
       return res.data;
     },

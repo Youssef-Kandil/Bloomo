@@ -55,7 +55,9 @@ export const salaryAdvanceService = {
       where: { id, companyId },
       include: {
         employee: {
-          include: { user: { select: { branchId: true, companyId: true } } },
+          include: {
+            user: { select: { branchId: true, companyId: true, name: true } },
+          },
         },
       },
     });
@@ -111,15 +113,19 @@ export const salaryAdvanceService = {
     await ensureExpenseFitsMonth(companyId, req.amount);
 
     // Atomically: mark approved, create treasury expense, link them.
+    const employeeName = req.employee.user.name;
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+      2,
+      '0',
+    )}-${String(today.getDate()).padStart(2, '0')}`;
     return prisma.$transaction(async (tx) => {
       const entry = await tx.treasuryEntry.create({
         data: {
           companyId,
           kind: 'EXPENSE',
           amount: req.amount,
-          reason: `سلفة راتب — ${employee.user ? '' : ''}${req.appliedYear}/${String(
-            req.appliedMonth,
-          ).padStart(2, '0')}`,
+          reason: `سلفة راتب لـ ${employeeName} — ${dateStr}`,
           createdByUserId: actorId,
         },
       });

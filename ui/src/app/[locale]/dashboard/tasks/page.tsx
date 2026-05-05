@@ -28,7 +28,14 @@ import {
 import { useMemo, useState, type ComponentType } from 'react';
 import { toast } from 'sonner';
 
+import {
+  DateRangeFilter,
+  rangeFromPreset,
+  type DateRangeValue,
+} from '@/components/shared/DateRangeFilter';
 import { DetailDrawer, DetailRow } from '@/components/shared/DetailDrawer';
+import { Pagination } from '@/components/shared/Pagination';
+import { usePagination } from '@/hooks/usePagination';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -126,8 +133,25 @@ export default function TasksPage() {
   const rejectMut = useRejectCollection();
 
   const [drawer, setDrawer] = useState<DrawerState>(null);
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => ({
+    preset: 'currentWeek',
+    ...rangeFromPreset('currentWeek'),
+  }));
 
-  const items = list.data?.items ?? [];
+  const allItems = list.data?.items ?? [];
+  const items = useMemo(() => {
+    if (!dateRange.from && !dateRange.to) return allItems;
+    const fromTs = dateRange.from ? new Date(dateRange.from).getTime() : -Infinity;
+    const toTs = dateRange.to
+      ? new Date(`${dateRange.to}T23:59:59.999Z`).getTime()
+      : Infinity;
+    return allItems.filter((tk) => {
+      const ts = new Date(tk.createdAt).getTime();
+      return ts >= fromTs && ts <= toTs;
+    });
+  }, [allItems, dateRange.from, dateRange.to]);
+
+  const tasksPg = usePagination(items);
 
   const container = {
     hidden: { opacity: 0 },
@@ -189,6 +213,9 @@ export default function TasksPage() {
               </div>
             </div>
           </CardHeader>
+          <div className="px-6 pt-2">
+            <DateRangeFilter value={dateRange} onChange={setDateRange} />
+          </div>
           <CardContent className="p-0">
             {list.isLoading ? (
               <div className="p-6 space-y-2">
@@ -200,7 +227,7 @@ export default function TasksPage() {
               <p className="p-8 text-sm text-muted-foreground text-center">{t('tasks.empty')}</p>
             ) : (
               <ul className="divide-y divide-border">
-                {items.map((task, i) => (
+                {tasksPg.paginated.map((task, i) => (
                   <TaskRow
                     key={task.id}
                     task={task}
@@ -213,6 +240,14 @@ export default function TasksPage() {
                 ))}
               </ul>
             )}
+            <Pagination
+              page={tasksPg.page}
+              pageCount={tasksPg.pageCount}
+              onPageChange={tasksPg.setPage}
+              totalCount={tasksPg.totalCount}
+              firstIndex={tasksPg.firstIndex}
+              lastIndex={tasksPg.lastIndex}
+            />
           </CardContent>
         </Card>
       </motion.div>

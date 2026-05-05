@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/shared/Pagination';
 import {
   useBanUser,
   useResetUserPassword,
@@ -22,7 +23,13 @@ export default function SystemUsersPage() {
   const [search, setSearch] = useState('');
   const [role, setRole] = useState<string>('');
   const [page, setPage] = useState(1);
-  const list = useSystemUsers(search || undefined, role || undefined, page);
+  const PAGE_SIZE = 10;
+  const list = useSystemUsers(search || undefined, role || undefined, page, PAGE_SIZE);
+  const total = list.data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const itemsLen = list.data?.items.length ?? 0;
+  const firstIndex = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const lastIndex = total === 0 ? 0 : (page - 1) * PAGE_SIZE + itemsLen;
 
   const banMut = useBanUser();
   const unbanMut = useUnbanUser();
@@ -194,6 +201,14 @@ export default function SystemUsersPage() {
           </tbody>
         </table>
       </div>
+      <Pagination
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
+        totalCount={total}
+        firstIndex={firstIndex}
+        lastIndex={lastIndex}
+      />
 
       {/* Ban dialog with reason */}
       {banTarget && (

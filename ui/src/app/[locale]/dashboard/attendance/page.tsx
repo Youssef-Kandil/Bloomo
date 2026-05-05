@@ -6,12 +6,14 @@ import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { Pagination } from '@/components/shared/Pagination';
 import {
   TableSearch,
   TableShell,
   TableToolbar,
   stickyTheadClass,
 } from '@/components/shared/TableShell';
+import { usePagination } from '@/hooks/usePagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,11 +55,187 @@ interface AttendanceRow {
   employee?: { user: { name: string } };
 }
 
+type AttendanceBlockReason =
+  | 'OFF_DAY_NEEDS_APPROVED_REQUEST'
+  | 'ALREADY_CHECKED_IN'
+  | 'NOT_CHECKED_IN'
+  | 'ALREADY_CHECKED_OUT'
+  | 'COMPLETED_NEEDS_OVERTIME_APPROVAL'
+  | 'OVERTIME_DAY_DONE';
+
+interface AttendanceStateView {
+  canCheckIn: boolean;
+  canCheckOut: boolean;
+  reason: AttendanceBlockReason | null;
+  isOffDay: boolean;
+  hasOffDayApproval: boolean;
+  hasOvertimeApproval: boolean;
+  todayCheckIns: number;
+  todayCheckOuts: number;
+  lastCheckInAt: string | null;
+  lastCheckOutAt: string | null;
+}
+
 function errorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
     return (err.response?.data as { error?: { message?: string } })?.error?.message ?? err.message;
   }
   return err instanceof Error ? err.message : String(err);
+}
+
+interface OnDutyEmployee {
+  employeeId: string;
+  name: string;
+  lastCheckInAt: string | null;
+}
+
+function StaffForceCheckoutCard(): React.ReactElement {
+  const t = useTranslations();
+  const qc = useQueryClient();
+
+  const onDuty = useQuery({
+    queryKey: ['attendance', 'on-duty'],
+    queryFn: async () => {
+      const res = await api.get<{ items: OnDutyEmployee[] }>('/api/attendance/on-duty');
+      return res.data.items;
+    },
+    refetchInterval: 30_000,
+  });
+
+  const forceMut = useMutation({
+    mutationFn: async (employeeId: string) =>
+      (await api.post(`/api/attendance/employees/${employeeId}/check-out`)).data,
+    // Optimistic: drop the row from the on-duty list immediately so the box
+    // updates before the refetch lands.
+    onMutate: async (employeeId: string) => {
+      await qc.cancelQueries({ queryKey: ['attendance', 'on-duty'] });
+      const prev = qc.getQueryData<OnDutyEmployee[]>(['attendance', 'on-duty']);
+      qc.setQueryData<OnDutyEmployee[]>(['attendance', 'on-duty'], (old) =>
+        (old ?? []).filter((u) => u.employeeId !== employeeId),
+      );
+      return { prev };
+    },
+    onSuccess: () => {
+      toast.success(t('attendance.forceCheckOutSuccess'));
+      qc.invalidateQueries({ queryKey: ['attendance'] });
+    },
+    onError: (err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['attendance', 'on-duty'], ctx.prev);
+      toast.error(errorMessage(err));
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{t('attendance.forceCheckOutTitle')}</CardTitle>
+        <p className="text-xs text-muted-foreground">{t('attendance.forceCheckOutHint')}</p>
+      </CardHeader>
+      <CardContent>
+        {onDuty.isLoading && <div className="h-12 rounded-lg shimmer" />}
+        {!onDuty.isLoading && (onDuty.data?.length ?? 0) === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            {t('attendance.noOnDuty')}
+          </p>
+        )}
+        {(onDuty.data?.length ?? 0) > 0 && (
+          <ul className="space-y-2">
+            {onDuty.data?.map((u) => (
+              <li
+                key={u.employeeId}
+                className="flex items-center justify-between rounded-xl border border-border p-2.5"
+              >
+                <div className="min-w-0">
+                  <span className="text-sm font-medium block">{u.name}</span>
+                  {u.lastCheckInAt && (
+                    <span className="text-xs text-muted-foreground">
+                      {t('attendance.checkInAt')}:{' '}
+                      {new Date(u.lastCheckInAt).toLocaleTimeString(undefined, {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => forceMut.mutate(u.employeeId)}
+                  disabled={forceMut.isPending}
+                >
+                  {t('attendance.forceCheckOutCta')}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmployeeAttendanceActions({
+  state,
+  submitting,
+  onCheckIn,
+  onCheckOut,
+}: {
+  state: AttendanceStateView | undefined;
+  submitting: boolean;
+  onCheckIn: () => void;
+  onCheckOut: () => void;
+}): React.ReactElement {
+  const t = useTranslations();
+  const reasonText = state?.reason ? t(`attendance.reasons.${state.reason}`) : '';
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          onClick={onCheckIn}
+          disabled={submitting || !state?.canCheckIn}
+          title={!state?.canCheckIn ? reasonText : undefined}
+        >
+          {t('attendance.checkIn')}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={onCheckOut}
+          disabled={submitting || !state?.canCheckOut}
+          title={!state?.canCheckOut ? reasonText : undefined}
+        >
+          {t('attendance.checkOut')}
+        </Button>
+        {state?.lastCheckInAt && (
+          <span className="ms-auto text-xs text-muted-foreground self-center tabular-nums">
+            {t('attendance.checkInAt')}:{' '}
+            {new Date(state.lastCheckInAt).toLocaleTimeString(undefined, {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+            {state.lastCheckOutAt && (
+              <>
+                {' · '}
+                {t('attendance.checkOutAt')}:{' '}
+                {new Date(state.lastCheckOutAt).toLocaleTimeString(undefined, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </>
+            )}
+          </span>
+        )}
+      </div>
+      {state && !state.canCheckIn && !state.canCheckOut && state.reason && (
+        <p className="text-xs text-muted-foreground">{reasonText}</p>
+      )}
+      {state && state.isOffDay && state.hasOffDayApproval && (
+        <p className="text-xs text-emerald-600">{t('attendance.offDayApprovedActive')}</p>
+      )}
+      {state && state.hasOvertimeApproval && (
+        <p className="text-xs text-amber-600">{t('attendance.overtimeApprovedActive')}</p>
+      )}
+    </div>
+  );
 }
 
 function statusBadge(status: 'PENDING' | 'APPROVED' | 'REJECTED', t: ReturnType<typeof useTranslations>) {
@@ -83,8 +261,19 @@ export default function AttendancePage() {
   const submit = useMutation({
     mutationFn: async (type: 'CHECK_IN' | 'CHECK_OUT') =>
       (await api.post('/api/attendance', { type })).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['attendance'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['attendance'] });
+      qc.invalidateQueries({ queryKey: ['attendance', 'state'] });
+    },
     onError: (err) => toast.error(errorMessage(err)),
+  });
+
+  const stateQuery = useQuery({
+    queryKey: ['attendance', 'state'],
+    enabled: isEmployee,
+    queryFn: async () =>
+      (await api.get<{ state: AttendanceStateView }>('/api/attendance/state')).data.state,
+    refetchInterval: 30_000,
   });
 
   const decide = useMutation({
@@ -98,19 +287,15 @@ export default function AttendancePage() {
       <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('nav.attendance')}</h1>
 
       {isEmployee && (
-        <div className="flex gap-2">
-          <Button onClick={() => submit.mutate('CHECK_IN')} disabled={submit.isPending}>
-            {t('attendance.checkIn')}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => submit.mutate('CHECK_OUT')}
-            disabled={submit.isPending}
-          >
-            {t('attendance.checkOut')}
-          </Button>
-        </div>
+        <EmployeeAttendanceActions
+          state={stateQuery.data}
+          submitting={submit.isPending}
+          onCheckIn={() => submit.mutate('CHECK_IN')}
+          onCheckOut={() => submit.mutate('CHECK_OUT')}
+        />
       )}
+
+      {isStaff && <StaffForceCheckoutCard />}
 
       <AttendanceTable
         rows={list.data ?? []}
@@ -166,6 +351,8 @@ function AttendanceTable({
     });
   }, [rows, search, type, status]);
 
+  const pg = usePagination(filtered);
+
   const selectClass =
     'rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring h-9';
 
@@ -209,7 +396,7 @@ function AttendanceTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((r) => (
+              {pg.paginated.map((r) => (
                 <tr key={r.id} className="hover:bg-muted/50">
                   {isStaff && <td className="px-5 py-3">{r.employee?.user.name ?? '—'}</td>}
                   <td className="px-5 py-3">
@@ -241,6 +428,14 @@ function AttendanceTable({
             <p className="p-6 text-sm text-muted-foreground text-center">{t('common.empty')}</p>
           )}
         </TableShell>
+        <Pagination
+          page={pg.page}
+          pageCount={pg.pageCount}
+          onPageChange={pg.setPage}
+          totalCount={pg.totalCount}
+          firstIndex={pg.firstIndex}
+          lastIndex={pg.lastIndex}
+        />
       </CardContent>
     </Card>
   );
@@ -349,7 +544,7 @@ function StaffOffDaySection(): React.ReactElement {
       <CardHeader>
         <CardTitle>{t('offDay.pending')}</CardTitle>
       </CardHeader>
-      <CardContent className="p-0 max-h-[36rem] overflow-auto">
+      <CardContent className="p-0 overflow-x-auto md:max-h-[36rem] md:overflow-auto">
         {list.isLoading ? (
           <div className="p-6 space-y-2">
             {Array.from({ length: 2 }).map((_, i) => (
@@ -506,7 +701,7 @@ function StaffOvertimeSection(): React.ReactElement {
       <CardHeader>
         <CardTitle>{t('overtime.pending')}</CardTitle>
       </CardHeader>
-      <CardContent className="p-0 max-h-[36rem] overflow-auto">
+      <CardContent className="p-0 overflow-x-auto md:max-h-[36rem] md:overflow-auto">
         {(list.data?.length ?? 0) === 0 ? (
           <p className="p-6 text-sm text-muted-foreground text-center">{t('offDay.empty')}</p>
         ) : (
@@ -636,7 +831,7 @@ function StaffLeaveSection(): React.ReactElement {
   return (
     <Card>
       <CardHeader><CardTitle>{t('leave.pending')}</CardTitle></CardHeader>
-      <CardContent className="p-0 max-h-[36rem] overflow-auto">
+      <CardContent className="p-0 overflow-x-auto md:max-h-[36rem] md:overflow-auto">
         {(list.data?.length ?? 0) === 0 ? (
           <p className="p-6 text-sm text-muted-foreground text-center">{t('offDay.empty')}</p>
         ) : (
@@ -774,7 +969,7 @@ function StaffAdvanceSection(): React.ReactElement {
   return (
     <Card>
       <CardHeader><CardTitle>{t('advance.pending')}</CardTitle></CardHeader>
-      <CardContent className="p-0 max-h-[36rem] overflow-auto">
+      <CardContent className="p-0 overflow-x-auto md:max-h-[36rem] md:overflow-auto">
         {(list.data?.length ?? 0) === 0 ? (
           <p className="p-6 text-sm text-muted-foreground text-center">{t('offDay.empty')}</p>
         ) : (

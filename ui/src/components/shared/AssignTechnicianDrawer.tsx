@@ -4,6 +4,7 @@ import * as React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import {
+  Ban,
   Check,
   ChevronDown,
   ChevronsUpDown,
@@ -100,6 +101,8 @@ export function AssignTechnicianDrawer({ request, open, onOpenChange }: Props): 
   }, [candidates, search, sort]);
 
   function toggle(id: string): void {
+    const cand = candidates.find((c) => c.employeeId === id);
+    if (cand && !cand.isOnDuty) return;
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -267,6 +270,12 @@ function CandidateRow({
 }): React.ReactElement {
   const t = useTranslations('requests.assign');
   const isTop = rank !== null && rank <= 3;
+  const onDuty = candidate.isOnDuty;
+  const offDutyReason = !candidate.checkedInAt
+    ? t('offDutyNotCheckedIn')
+    : candidate.checkedOutAt
+      ? t('offDutyCheckedOut')
+      : '';
 
   return (
     <li
@@ -274,22 +283,27 @@ function CandidateRow({
         'rounded-xl border bg-card transition-colors',
         selected ? 'border-primary/60 ring-1 ring-primary/30' : 'border-border',
         isTop && rank === 1 && 'shadow-soft',
+        !onDuty && 'opacity-60 grayscale-[35%]',
       )}
     >
       <div className="flex items-center gap-3 p-3">
         <button
           type="button"
           onClick={onToggle}
+          disabled={!onDuty}
           aria-pressed={selected}
           aria-label={selected ? t('deselect') : t('select')}
           className={cn(
             'size-5 rounded-md border flex items-center justify-center shrink-0 transition-colors',
-            selected
+            selected && onDuty
               ? 'bg-primary border-primary text-primary-foreground'
-              : 'border-border bg-surface hover:border-primary/50',
+              : 'border-border bg-surface',
+            onDuty
+              ? 'hover:border-primary/50 cursor-pointer'
+              : 'cursor-not-allowed bg-muted',
           )}
         >
-          {selected && <Check className="size-3.5" />}
+          {selected && onDuty && <Check className="size-3.5" />}
         </button>
 
         <button
@@ -298,7 +312,7 @@ function CandidateRow({
           className="flex-1 min-w-0 text-start flex items-center gap-2"
         >
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-wrap">
               {rank !== null && (
                 <span
                   className={cn(
@@ -312,7 +326,7 @@ function CandidateRow({
                   #{rank}
                 </span>
               )}
-              {rank === 1 && <Star className="size-4 text-amber-500 fill-amber-500 shrink-0" />}
+              {rank === 1 && onDuty && <Star className="size-4 text-amber-500 fill-amber-500 shrink-0" />}
               <span className="truncate font-medium text-sm">{candidate.name}</span>
               {!candidate.isFresh && (
                 <WifiOff
@@ -320,13 +334,21 @@ function CandidateRow({
                   aria-label={t('staleLocation')}
                 />
               )}
+              {!onDuty && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-destructive/10 text-destructive">
+                  <Ban className="size-3" />
+                  {t('notAvailable')}
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {t('pointsLine', {
-                total: candidate.total,
-                distance: candidate.distancePoints,
-                rating: candidate.ratingBonus,
-              })}
+              {!onDuty
+                ? offDutyReason
+                : t('pointsLine', {
+                    total: candidate.total,
+                    distance: candidate.distancePoints,
+                    rating: candidate.ratingBonus,
+                  })}
             </p>
           </div>
           <span className="text-base font-semibold text-primary tabular-nums shrink-0">

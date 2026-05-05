@@ -7,7 +7,14 @@ import { Package, Plus, Search, Truck, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import {
+  DateRangeFilter,
+  rangeFromPreset,
+  type DateRangeValue,
+} from '@/components/shared/DateRangeFilter';
 import { DetailDrawer, DetailRow } from '@/components/shared/DetailDrawer';
+import { Pagination } from '@/components/shared/Pagination';
+import { usePagination } from '@/hooks/usePagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,6 +109,25 @@ export default function InventoryPage() {
   }, [list.data, query]);
 
   const total = filtered.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
+  const itemsPg = usePagination(filtered);
+
+  const [opsDateRange, setOpsDateRange] = useState<DateRangeValue>(() => ({
+    preset: 'currentWeek',
+    ...rangeFromPreset('currentWeek'),
+  }));
+  const filteredOps = useMemo(() => {
+    const all = operations.data ?? [];
+    if (!opsDateRange.from && !opsDateRange.to) return all;
+    const fromTs = opsDateRange.from ? new Date(opsDateRange.from).getTime() : -Infinity;
+    const toTs = opsDateRange.to
+      ? new Date(`${opsDateRange.to}T23:59:59.999Z`).getTime()
+      : Infinity;
+    return all.filter((op) => {
+      const ts = new Date(op.createdAt).getTime();
+      return ts >= fromTs && ts <= toTs;
+    });
+  }, [operations.data, opsDateRange.from, opsDateRange.to]);
+  const opsPg = usePagination(filteredOps);
 
   const container = {
     hidden: { opacity: 0 },
@@ -164,7 +190,7 @@ export default function InventoryPage() {
             ) : filtered.length === 0 ? (
               <p className="p-8 text-sm text-muted-foreground text-center">{t('inventory.empty')}</p>
             ) : (
-              <div className="overflow-auto max-h-[34rem]">
+              <div className="overflow-x-auto md:overflow-auto md:max-h-[34rem]">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10 bg-card text-muted-foreground text-xs uppercase tracking-wide border-b border-border">
                     <tr>
@@ -176,7 +202,7 @@ export default function InventoryPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {filtered.map((it, i) => (
+                    {itemsPg.paginated.map((it, i) => (
                       <motion.tr
                         key={it.id}
                         initial={{ opacity: 0, y: 4 }}
@@ -207,6 +233,14 @@ export default function InventoryPage() {
                 </table>
               </div>
             )}
+            <Pagination
+              page={itemsPg.page}
+              pageCount={itemsPg.pageCount}
+              onPageChange={itemsPg.setPage}
+              totalCount={itemsPg.totalCount}
+              firstIndex={itemsPg.firstIndex}
+              lastIndex={itemsPg.lastIndex}
+            />
           </CardContent>
         </Card>
       </motion.div>
@@ -531,6 +565,9 @@ export default function InventoryPage() {
               )}
             </div>
           </CardHeader>
+          <div className="px-6 pt-2 pb-3">
+            <DateRangeFilter value={opsDateRange} onChange={setOpsDateRange} />
+          </div>
           <CardContent className="p-0">
             {operations.isLoading ? (
               <div className="p-6 space-y-2">
@@ -538,7 +575,7 @@ export default function InventoryPage() {
                   <div key={i} className="h-14 rounded-lg shimmer" />
                 ))}
               </div>
-            ) : (operations.data?.length ?? 0) === 0 ? (
+            ) : filteredOps.length === 0 ? (
               <p className="p-8 text-sm text-muted-foreground text-center">
                 {t('inventory.noOperations')}
               </p>
@@ -547,6 +584,9 @@ export default function InventoryPage() {
                 <table className="w-full text-sm">
                   <thead className="text-muted-foreground text-xs uppercase tracking-wide">
                     <tr>
+                      <th className="text-start font-medium px-5 py-3">
+                        {t('inventory.opDate')}
+                      </th>
                       <th className="text-start font-medium px-5 py-3">
                         {t('inventory.client')}
                       </th>
@@ -563,12 +603,15 @@ export default function InventoryPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {operations.data?.map((op) => (
+                    {opsPg.paginated.map((op) => (
                       <tr
                         key={op.id}
                         onClick={() => setDrawer({ mode: 'viewOperation', operation: op })}
                         className="cursor-pointer transition-colors hover:bg-muted/50"
                       >
+                        <td className="px-5 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(op.createdAt).toLocaleDateString()}
+                        </td>
                         <td className="px-5 py-3 font-medium">{op.client.name}</td>
                         <td className="px-5 py-3">{op.employee.name}</td>
                         <td className="px-5 py-3 text-muted-foreground text-xs">
@@ -603,6 +646,14 @@ export default function InventoryPage() {
                 </table>
               </div>
             )}
+            <Pagination
+              page={opsPg.page}
+              pageCount={opsPg.pageCount}
+              onPageChange={opsPg.setPage}
+              totalCount={opsPg.totalCount}
+              firstIndex={opsPg.firstIndex}
+              lastIndex={opsPg.lastIndex}
+            />
           </CardContent>
         </Card>
       </motion.div>

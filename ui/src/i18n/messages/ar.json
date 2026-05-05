@@ -30,7 +30,7 @@
     "permissions": "الصلاحيات",
     "tasks": "المهام",
     "tools": "المعدات والأدوات",
-    "requests": "طلبات الصيانة",
+    "requests": "طلبات الدعم",
     "attendance": "الحضور والانصراف",
     "treasury": "الخزنة",
     "payroll": "الرواتب",
@@ -74,7 +74,24 @@
     "rejectReason": "سبب الرفض",
     "searchPlaceholder": "ابحث باسم الموظف…",
     "filterAllTypes": "كل الأنواع",
-    "filterAllStatuses": "كل الحالات"
+    "filterAllStatuses": "كل الحالات",
+    "checkInAt": "حضور",
+    "checkOutAt": "انصراف",
+    "offDayApprovedActive": "✅ في طلب أجازة معتمد لليوم — يمكنك تسجيل الحضور",
+    "overtimeApprovedActive": "✅ في طلب أوفر تايم معتمد — يمكنك تسجيل حضور إضافي",
+    "forceCheckOutTitle": "تسجيل انصراف موظف",
+    "forceCheckOutHint": "الموظفون اللي مسجلين حضور ولسه ما اتسجلش انصرافهم. اضغط للزر لتسجيل انصرافهم نيابة عنهم.",
+    "forceCheckOutCta": "تسجيل انصراف",
+    "forceCheckOutSuccess": "تم تسجيل الانصراف",
+    "noOnDuty": "لا يوجد موظفون مسجلون حضوراً الآن",
+    "reasons": {
+      "OFF_DAY_NEEDS_APPROVED_REQUEST": "اليوم أجازتك — قدّم طلب حضور في يوم الأجازة وانتظر اعتماده أولاً.",
+      "ALREADY_CHECKED_IN": "أنت مسجل حضور بالفعل اليوم.",
+      "NOT_CHECKED_IN": "لم تسجل حضوراً بعد — لا يمكنك تسجيل الانصراف.",
+      "ALREADY_CHECKED_OUT": "تم تسجيل انصرافك اليوم بالفعل.",
+      "COMPLETED_NEEDS_OVERTIME_APPROVAL": "ساعات العمل انتهت. لتسجيل حضور إضافي، قدّم طلب أوفر تايم وانتظر اعتماده.",
+      "OVERTIME_DAY_DONE": "خلصت أوفر تايم اليوم — لا يمكن إضافة جلسات إضافية."
+    }
   },
   "payroll": {
     "description": "حساب الرواتب بناءً على جدول الحضور والخصومات الشهرية.",
@@ -314,8 +331,16 @@
     "expenseReasonPlaceholder": "مثال: صيانة سيارة، مصاريف تشغيل…",
     "filterAll": "الكل"
   },
+  "overview": {
+    "requestsToday": "طلبات اليوم المفتوحة",
+    "requestsTodayHint": "طلبات الدعم اللي اتسجلت اليوم وما خلصتش",
+    "requestsYesterday": "طلبات أمس المفتوحة",
+    "requestsYesterdayHint": "طلبات صيانة أمس اللي لسة محتاجة متابعة",
+    "requestsEmpty": "لا توجد طلبات مفتوحة"
+  },
   "inventory": {
     "title": "المخزن",
+    "opDate": "تاريخ العملية",
     "addTitle": "إضافة عنصر",
     "addDesc": "إنشاء عنصر جديد في المخزن.",
     "editTitle": "تعديل العنصر",
@@ -467,6 +492,13 @@
     "addPhone": "إضافة رقم",
     "noPhones": "لا توجد أرقام هاتف",
     "phoneInvalid": "رقم هاتف غير صالح"
+  },
+  "pagination": {
+    "range": "{from}–{to} من {total}",
+    "first": "الأولى",
+    "prev": "السابق",
+    "next": "التالي",
+    "last": "الأخيرة"
   },
   "errors": {
     "notAuthorized": {
@@ -767,6 +799,9 @@
       "yes": "نعم",
       "no": "لا",
       "staleLocation": "آخر موقع قديم",
+      "notAvailable": "غير متاح",
+      "offDutyNotCheckedIn": "لم يسجّل حضور اليوم — غير متاح للتعيين",
+      "offDutyCheckedOut": "سجّل انصراف — غير متاح للتعيين",
       "pointsLine": "النقاط {total}/10 · المسافة {distance} + التقييم {rating}",
       "sort": {
         "recommended": "ترشيح النظام",

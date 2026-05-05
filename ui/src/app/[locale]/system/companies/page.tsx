@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ArrowRight, Building2, Search } from 'lucide-react';
 
+import { Pagination } from '@/components/shared/Pagination';
 import { Input } from '@/components/ui/input';
 import { Link } from '@/i18n/routing';
 import { useSystemCompanies } from '@/hooks/queries/system';
@@ -12,7 +13,13 @@ export default function SystemCompaniesPage() {
   const t = useTranslations('system');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const list = useSystemCompanies(search || undefined, page);
+  const PAGE_SIZE = 10;
+  const list = useSystemCompanies(search || undefined, page, PAGE_SIZE);
+  const total = list.data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const itemsLen = list.data?.items.length ?? 0;
+  const firstIndex = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const lastIndex = total === 0 ? 0 : (page - 1) * PAGE_SIZE + itemsLen;
 
   return (
     <div className="space-y-4">
@@ -97,6 +104,14 @@ export default function SystemCompaniesPage() {
           </tbody>
         </table>
       </div>
+      <Pagination
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
+        totalCount={total}
+        firstIndex={firstIndex}
+        lastIndex={lastIndex}
+      />
     </div>
   );
 }

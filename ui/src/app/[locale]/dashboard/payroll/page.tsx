@@ -5,10 +5,12 @@ import { Banknote, Printer } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
+import { Pagination } from '@/components/shared/Pagination';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from '@/i18n/routing';
 import { usePayrollSummary } from '@/hooks/queries/payroll';
+import { usePagination } from '@/hooks/usePagination';
 
 const MONTHS_AR = [
   'يناير',
@@ -33,6 +35,7 @@ export default function PayrollPage(): React.ReactElement {
   const [month, setMonth] = useState(today.getMonth() + 1);
 
   const summary = usePayrollSummary(year, month);
+  const payPg = usePagination(summary.data ?? []);
 
   const yearOptions = useMemo(() => {
     const y = today.getFullYear();
@@ -134,7 +137,7 @@ export default function PayrollPage(): React.ReactElement {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {summary.data?.map((row) => {
+                    {payPg.paginated.map((row) => {
                       const lastDay = new Date(year, month, 0).getDate();
                       const period = `01/${String(month).padStart(2, '0')} – ${lastDay}/${String(month).padStart(2, '0')}/${year}`;
                       return (
@@ -176,6 +179,15 @@ export default function PayrollPage(): React.ReactElement {
                 </table>
               </div>
             )}
+            <Pagination
+              page={payPg.page}
+              pageCount={payPg.pageCount}
+              onPageChange={payPg.setPage}
+              totalCount={payPg.totalCount}
+              firstIndex={payPg.firstIndex}
+              lastIndex={payPg.lastIndex}
+              className="no-print"
+            />
           </CardContent>
         </Card>
       </motion.div>

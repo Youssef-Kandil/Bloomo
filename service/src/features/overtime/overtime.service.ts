@@ -79,6 +79,24 @@ export const overtimeService = {
   /**
    * Sum of approved overtime hours for an employee in a given month.
    */
+  /** True if there's an APPROVED overtime request whose `date` falls on the
+   * same calendar day as `date`. */
+  async hasApprovedForDate(employeeId: string, date: Date): Promise<boolean> {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+    const row = await prisma.overtimeRequest.findFirst({
+      where: {
+        employeeId,
+        status: 'APPROVED',
+        date: { gte: start, lte: end },
+      },
+      select: { id: true },
+    });
+    return !!row;
+  },
+
   async approvedHoursForMonth(
     employeeId: string,
     year: number,

@@ -36,4 +36,19 @@ export const attendanceController = {
       ),
     });
   },
+  async myState(req: Request, res: Response): Promise<void> {
+    res.json({ state: await attendanceService.getState(req.user!.id) });
+  },
+  async onDuty(req: Request, res: Response): Promise<void> {
+    res.json({ items: await attendanceService.listOnDuty(companyId(req)) });
+  },
+  async forceCheckOut(req: Request, res: Response): Promise<void> {
+    res.status(201).json({
+      attendance: await attendanceService.forceCheckOut(
+        req.user!.id,
+        param(req, 'employeeId'),
+        companyId(req),
+      ),
+    });
+  },
 };

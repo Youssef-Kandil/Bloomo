@@ -20,6 +20,8 @@ import { useReverseGeocode } from '@/hooks/useReverseGeocode';
 
 import { EmployeeMarkers } from '@/components/map/EmployeeMarkers';
 import { DetailDrawer, DetailRow } from '@/components/shared/DetailDrawer';
+import { Pagination } from '@/components/shared/Pagination';
+import { usePagination } from '@/hooks/usePagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,6 +79,8 @@ export default function EmployeesPage() {
       (e) => e.name.toLowerCase().includes(q) || e.email.toLowerCase().includes(q),
     );
   }, [list.data, query]);
+
+  const empPg = usePagination(filtered);
 
   const liveById = useMemo(() => {
     const map = new Map<string, { lat: number; lng: number }>();
@@ -186,7 +190,7 @@ export default function EmployeesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filtered.map((e, i) => (
+                  {empPg.paginated.map((e, i) => (
                     <motion.tr
                       key={e.id}
                       initial={{ opacity: 0, y: 4 }}
@@ -224,6 +228,14 @@ export default function EmployeesPage() {
               </table>
             </div>
           )}
+          <Pagination
+            page={empPg.page}
+            pageCount={empPg.pageCount}
+            onPageChange={empPg.setPage}
+            totalCount={empPg.totalCount}
+            firstIndex={empPg.firstIndex}
+            lastIndex={empPg.lastIndex}
+          />
         </CardContent>
       </Card>
       </motion.div>

@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import {
   Building2,
@@ -9,9 +9,11 @@ import {
   Inbox,
   LayoutDashboard,
   LogOut,
+  Menu,
   Sparkles,
   Tag,
   Users,
+  X,
 } from 'lucide-react';
 
 import { NotAuthorized } from '@/components/shared/NotAuthorized';
@@ -40,10 +42,14 @@ const NAV: NavEntry[] = [
 
 export default function SystemLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations();
+  const locale = useLocale();
   const me = useMe();
   const router = useRouter();
   const pathname = usePathname();
   const logout = useLogout();
+  const [open, setOpen] = useState(false);
+  const isRtl = locale === 'ar';
+  const offX = isRtl ? '110%' : '-110%';
 
   useEffect(() => {
     if (me.isFetched && !me.data) router.replace('/login');
@@ -72,31 +78,65 @@ export default function SystemLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="min-h-screen flex bg-background">
-      <aside className="w-64 shrink-0 border-e border-border bg-card/60 backdrop-blur-md hidden md:flex flex-col">
-        <div className="px-5 py-5 border-b border-border flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-rose-500 shadow-glow">
-            <Sparkles className="size-5 text-white" />
-          </div>
-          <div className="leading-tight">
-            <p className="font-bold tracking-tight text-gradient">Bloomo</p>
-            <p className="text-[11px] uppercase tracking-wide text-amber-500 font-semibold">
-              {t('system.title')}
-            </p>
-          </div>
+      {/* mobile overlay */}
+      <div
+        onClick={() => setOpen(false)}
+        className={cn(
+          'fixed inset-0 z-30 bg-background/60 backdrop-blur-md transition-opacity duration-300 md:hidden',
+          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+        )}
+      />
+
+      <motion.aside
+        initial={false}
+        animate={{ x: open ? 0 : offX }}
+        transition={{ type: 'spring', stiffness: 280, damping: 32 }}
+        className={cn(
+          'fixed z-40 top-0 bottom-0 start-0 w-72 max-w-[85vw] bg-card/95 backdrop-blur-xl flex flex-col',
+          'border-e border-border shadow-elevated',
+          'md:static md:translate-x-0 md:!transform-none md:w-64 md:shrink-0 md:shadow-none md:bg-card/60 md:self-stretch',
+        )}
+      >
+        <div className="px-5 py-5 border-b border-border flex items-center justify-between shrink-0">
+          <Link
+            href="/system/overview"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 group"
+          >
+            <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-rose-500 shadow-glow">
+              <Sparkles className="size-5 text-white" />
+            </div>
+            <div className="leading-tight">
+              <p className="font-bold tracking-tight text-gradient">Bloomo</p>
+              <p className="text-[11px] uppercase tracking-wide text-amber-500 font-semibold">
+                {t('system.title')}
+              </p>
+            </div>
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setOpen(false)}
+            className="md:hidden"
+            aria-label="Close menu"
+          >
+            <X className="size-4" />
+          </Button>
         </div>
-        <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
+        <nav className="p-3 space-y-1 flex-1 overflow-y-auto min-h-0">
           {NAV.map((entry, i) => {
             const active = pathname.startsWith(entry.href);
             const Icon = entry.icon;
             return (
               <motion.div
                 key={entry.key}
-                initial={{ opacity: 0, x: -6 }}
+                initial={{ opacity: 0, x: isRtl ? 6 : -6 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.025 }}
               >
                 <Link
                   href={entry.href}
+                  onClick={() => setOpen(false)}
                   className={cn(
                     'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
                     active
@@ -118,7 +158,7 @@ export default function SystemLayout({ children }: { children: React.ReactNode }
             );
           })}
         </nav>
-        <div className="p-3 border-t border-border space-y-1">
+        <div className="p-3 border-t border-border space-y-1 shrink-0">
           <div className="flex items-center justify-between px-3 py-2">
             <div className="min-w-0">
               <p className="text-sm font-medium truncate">{me.data.name}</p>
@@ -138,11 +178,20 @@ export default function SystemLayout({ children }: { children: React.ReactNode }
             {t('auth.logout')}
           </Button>
         </div>
-      </aside>
+      </motion.aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="h-14 border-b border-border flex items-center justify-between px-4 md:px-6 bg-card/40 backdrop-blur-md">
+        <header className="h-14 border-b border-border flex items-center justify-between px-4 md:px-6 bg-card/40 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden -ms-2"
+              onClick={() => setOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="size-5" />
+            </Button>
             <span className="text-xs uppercase font-semibold tracking-wider text-amber-600">
               {t('system.title')}
             </span>

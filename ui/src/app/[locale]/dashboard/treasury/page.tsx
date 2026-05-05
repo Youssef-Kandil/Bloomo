@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 
 import { DateRangeFilter, rangeFromPreset, type DateRangeValue } from '@/components/shared/DateRangeFilter';
 import { DetailDrawer } from '@/components/shared/DetailDrawer';
+import { Pagination } from '@/components/shared/Pagination';
+import { usePagination } from '@/hooks/usePagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,6 +58,8 @@ export default function TreasuryPage() {
     const items = list.data ?? [];
     return filter === 'ALL' ? items : items.filter((e) => e.kind === filter);
   }, [list.data, filter]);
+
+  const trPg = usePagination(filtered);
 
   const container = {
     hidden: { opacity: 0 },
@@ -158,7 +162,7 @@ export default function TreasuryPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {filtered.map((e) => (
+                    {trPg.paginated.map((e) => (
                       <tr key={e.id} className="hover:bg-muted/50">
                         <td className="px-5 py-3 text-xs text-muted-foreground whitespace-nowrap">
                           {new Date(e.createdAt).toLocaleString(undefined, {
@@ -202,6 +206,14 @@ export default function TreasuryPage() {
                 </table>
               </div>
             )}
+            <Pagination
+              page={trPg.page}
+              pageCount={trPg.pageCount}
+              onPageChange={trPg.setPage}
+              totalCount={trPg.totalCount}
+              firstIndex={trPg.firstIndex}
+              lastIndex={trPg.lastIndex}
+            />
           </CardContent>
         </Card>
       </motion.div>

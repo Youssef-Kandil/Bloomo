@@ -8,6 +8,8 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { DetailDrawer, DetailRow } from '@/components/shared/DetailDrawer';
+import { Pagination } from '@/components/shared/Pagination';
+import { usePagination } from '@/hooks/usePagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,6 +65,9 @@ export default function ToolsPage() {
       (tt) => tt.name.toLowerCase().includes(q) || tt.code.toLowerCase().includes(q),
     );
   }, [list.data, query]);
+
+  const toolsPg = usePagination(filtered);
+  const custodyPg = usePagination(custody.data?.custody ?? []);
 
   const container = {
     hidden: { opacity: 0 },
@@ -155,7 +160,7 @@ export default function ToolsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {filtered.map((tt, i) => (
+                    {toolsPg.paginated.map((tt, i) => (
                       <motion.tr
                         key={tt.id}
                         initial={{ opacity: 0, y: 4 }}
@@ -180,6 +185,14 @@ export default function ToolsPage() {
                 </table>
               </div>
             )}
+            <Pagination
+              page={toolsPg.page}
+              pageCount={toolsPg.pageCount}
+              onPageChange={toolsPg.setPage}
+              totalCount={toolsPg.totalCount}
+              firstIndex={toolsPg.firstIndex}
+              lastIndex={toolsPg.lastIndex}
+            />
           </CardContent>
         </Card>
       </motion.div>
@@ -220,7 +233,7 @@ export default function ToolsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {custody.data?.custody?.map((c) => (
+                    {custodyPg.paginated.map((c) => (
                       <tr
                         key={c.id}
                         onClick={() => setDrawer({ mode: 'viewCustody', custody: c })}
@@ -268,6 +281,14 @@ export default function ToolsPage() {
                 </table>
               </div>
             )}
+            <Pagination
+              page={custodyPg.page}
+              pageCount={custodyPg.pageCount}
+              onPageChange={custodyPg.setPage}
+              totalCount={custodyPg.totalCount}
+              firstIndex={custodyPg.firstIndex}
+              lastIndex={custodyPg.lastIndex}
+            />
           </CardContent>
         </Card>
       </motion.div>

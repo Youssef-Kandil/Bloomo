@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 
 import { AssignTechnicianDrawer } from '@/components/shared/AssignTechnicianDrawer';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { Pagination } from '@/components/shared/Pagination';
+import { usePagination } from '@/hooks/usePagination';
 import { Button } from '@/components/ui/button';
 import {
   useDeleteRequest,
@@ -20,6 +22,8 @@ export default function RequestsPage() {
   const t = useTranslations();
   const [status, setStatus] = useState<string>('');
   const list = useRequests(status || undefined);
+  const items = list.data?.items ?? [];
+  const reqPg = usePagination(items);
   const [assignTarget, setAssignTarget] = useState<ServiceRequest | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ServiceRequest | null>(null);
   const deleteMut = useDeleteRequest();
@@ -54,21 +58,21 @@ export default function RequestsPage() {
         <table className="w-full text-sm">
           <thead className="text-fg-muted text-xs uppercase">
             <tr>
-              <th className="text-start py-2">Client</th>
-              <th className="text-start py-2">Type</th>
-              <th className="text-start py-2">Status</th>
-              <th className="text-start py-2">Created</th>
-              <th className="text-end py-2">{t('common.actions')}</th>
+              <th className="text-start px-4 py-2">Client</th>
+              <th className="text-start px-4 py-2">Type</th>
+              <th className="text-start px-4 py-2">Status</th>
+              <th className="text-start px-4 py-2">Created</th>
+              <th className="text-end px-4 py-2">{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {list.data?.items?.map((r) => (
+            {reqPg.paginated.map((r) => (
               <tr key={r.id}>
-                <td className="py-2 truncate">{r.client?.name ?? '—'}</td>
-                <td className="py-2">{r.type}</td>
-                <td className="py-2">{r.status}</td>
-                <td className="py-2 text-xs text-fg-muted">{new Date(r.createdAt).toLocaleString()}</td>
-                <td className="py-2 text-end">
+                <td className="px-4 py-2 truncate">{r.client?.name ?? '—'}</td>
+                <td className="px-4 py-2">{r.type}</td>
+                <td className="px-4 py-2">{r.status}</td>
+                <td className="px-4 py-2 text-xs text-fg-muted">{new Date(r.createdAt).toLocaleString()}</td>
+                <td className="px-4 py-2 text-end">
                   <div className="inline-flex items-center gap-2">
                     {(r.status === 'PENDING' || r.status === 'ASSIGNED') && (
                       <Button
@@ -98,6 +102,14 @@ export default function RequestsPage() {
           </tbody>
         </table>
       </div>
+      <Pagination
+        page={reqPg.page}
+        pageCount={reqPg.pageCount}
+        onPageChange={reqPg.setPage}
+        totalCount={reqPg.totalCount}
+        firstIndex={reqPg.firstIndex}
+        lastIndex={reqPg.lastIndex}
+      />
 
       <AssignTechnicianDrawer
         request={assignTarget}

@@ -7,6 +7,12 @@ import { rankingModel } from './ranking.model';
 export interface RankedEmployeeRow extends RankedCandidate {
   name: string;
   avatar: string | null;
+  /** Today's first APPROVED check-in time (ISO) — null if not checked in yet. */
+  checkedInAt: string | null;
+  /** Today's last APPROVED check-out time (ISO) — null if still on duty. */
+  checkedOutAt: string | null;
+  /** True iff checked in today AND has not checked out yet (assignable). */
+  isOnDuty: boolean;
 }
 
 export const rankingService = {
@@ -17,12 +23,15 @@ export const rankingService = {
     const employees = await rankingModel.listCompanyEmployees(companyId);
     const rowsMeta = new Map(employees.map((e) => [e.id, e.user]));
 
-    const historyPerEmp = await Promise.all(
-      employees.map(async (e) => ({
-        empId: e.id,
-        history: await rankingModel.historicalStats(e.id, request.clientId, request.type),
-      })),
-    );
+    const [historyPerEmp, attendance] = await Promise.all([
+      Promise.all(
+        employees.map(async (e) => ({
+          empId: e.id,
+          history: await rankingModel.historicalStats(e.id, request.clientId, request.type),
+        })),
+      ),
+      rankingModel.todayAttendanceByEmployee(employees.map((e) => e.id)),
+    ]);
     const historyMap = new Map(historyPerEmp.map((h) => [h.empId, h.history]));
 
     const ranked = rankCandidates(
@@ -42,10 +51,16 @@ export const rankingService = {
       },
     );
 
-    return ranked.map((r) => ({
-      ...r,
-      name: rowsMeta.get(r.employeeId)?.name ?? 'Unknown',
-      avatar: rowsMeta.get(r.employeeId)?.avatar ?? null,
-    }));
+    return ranked.map((r) => {
+      const att = attendance.get(r.employeeId);
+      return {
+        ...r,
+        name: rowsMeta.get(r.employeeId)?.name ?? 'Unknown',
+        avatar: rowsMeta.get(r.employeeId)?.avatar ?? null,
+        checkedInAt: att?.checkedInAt ?? null,
+        checkedOutAt: att?.checkedOutAt ?? null,
+        isOnDuty: att?.isOnDuty ?? false,
+      };
+    });
   },
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Sparkles, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,12 @@ interface AsideProps {
 
 export function Aside({ screens, open, onClose }: AsideProps) {
   const t = useTranslations();
+  const locale = useLocale();
   const pathname = usePathname();
+  const isRtl = locale === 'ar';
+  // off-screen direction: anchor on the logical "start" side, so we slide
+  // toward the start (right in RTL, left in LTR) when closing.
+  const offX = isRtl ? '110%' : '-110%';
 
   return (
     <>
@@ -31,16 +36,18 @@ export function Aside({ screens, open, onClose }: AsideProps) {
       />
       <motion.aside
         initial={false}
-        animate={{ x: open ? 0 : '-110%' }}
+        animate={{ x: open ? 0 : offX }}
         transition={{ type: 'spring', stiffness: 280, damping: 32 }}
         className={cn(
-          'fixed z-40 top-0 bottom-0 w-72 max-w-[85vw] bg-card/95 backdrop-blur-xl',
+          // mobile: fixed, anchored at the logical start (right in RTL, left in LTR)
+          'fixed z-40 top-0 bottom-0 start-0 w-72 max-w-[85vw] bg-card/95 backdrop-blur-xl flex flex-col',
           'border-e border-border shadow-elevated',
-          'md:static md:translate-x-0 md:!transform-none md:w-64 md:shrink-0 md:shadow-none md:bg-card/50',
+          // desktop: static in the flex layout, no transform, full height of parent
+          'md:static md:translate-x-0 md:!transform-none md:w-64 md:shrink-0 md:shadow-none md:bg-card/50 md:h-auto md:self-stretch',
         )}
       >
-        <div className="px-5 py-5 border-b border-border flex items-center justify-between">
-          <Link href="/dashboard/overview" className="flex items-center gap-2.5 group">
+        <div className="px-5 py-5 border-b border-border flex items-center justify-between shrink-0">
+          <Link href="/dashboard/overview" className="flex items-center gap-2.5 group" onClick={onClose}>
             <div className="relative flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-glow transition-transform group-hover:scale-105">
               <Sparkles className="size-5 text-white" />
             </div>
@@ -57,7 +64,7 @@ export function Aside({ screens, open, onClose }: AsideProps) {
           </Button>
         </div>
 
-        <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100%-4.25rem)]">
+        <nav className="p-3 space-y-1 overflow-y-auto flex-1 min-h-0">
           {screens.length === 0 && (
             <p className="text-sm text-muted-foreground px-3 py-2">{t('common.empty')}</p>
           )}
@@ -67,7 +74,7 @@ export function Aside({ screens, open, onClose }: AsideProps) {
             return (
               <motion.div
                 key={s.key}
-                initial={{ opacity: 0, x: -8 }}
+                initial={{ opacity: 0, x: isRtl ? 8 : -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.025, duration: 0.25 }}
               >
