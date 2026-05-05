@@ -10,14 +10,14 @@ import {
   Inbox,
   Clock,
   Wallet,
-  MessageCircle,
   Banknote,
+  CreditCard,
   Settings,
   PlusCircle,
   type LucideIcon,
 } from 'lucide-react';
 
-export type Role = 'ADMIN' | 'MANAGER' | 'EMPLOYEE' | 'CLIENT';
+export type Role = 'OWNER' | 'ADMIN' | 'MANAGER' | 'EMPLOYEE' | 'CLIENT';
 
 export interface ScreenDef {
   key: string;
@@ -40,9 +40,12 @@ export const SCREENS: readonly ScreenDef[] = [
   { key: 'attendance', labelKey: 'nav.attendance', href: '/dashboard/attendance', icon: Clock },
   { key: 'treasury', labelKey: 'nav.treasury', href: '/dashboard/treasury', icon: Wallet },
   { key: 'payroll', labelKey: 'nav.payroll', href: '/dashboard/payroll', icon: Banknote },
-  { key: 'whatsapp', labelKey: 'nav.whatsapp', href: '/dashboard/whatsapp', icon: MessageCircle },
+  { key: 'plans', labelKey: 'nav.plans', href: '/dashboard/plans', icon: CreditCard },
   { key: 'settings', labelKey: 'nav.settings', href: '/dashboard/settings', icon: Settings },
 ] as const;
+
+/** Screens that are exclusive to ADMIN — never visible to MANAGER even if granted. */
+export const ADMIN_ONLY_SCREENS = new Set(['plans']);
 
 export const EMPLOYEE_SCREENS = new Set(['attendance', 'my-tasks', 'settings']);
 export const CLIENT_SCREENS = new Set(['new-request', 'settings']);
@@ -63,7 +66,6 @@ export const SCREEN_ACTIONS: Record<string, readonly PermissionAction[]> = {
   attendance: ['view', 'edit'],
   treasury: ['view', 'create', 'edit', 'delete'],
   payroll: ['view', 'edit'],
-  whatsapp: ['view', 'edit'],
   settings: ['view', 'edit'],
 };
 
@@ -99,5 +101,5 @@ export function visibleScreens(
 
   // MANAGER — a screen is visible if canView is granted for it
   const allowed = new Set(managerPermissions.filter((p) => p.canView).map((p) => p.screenKey));
-  return SCREENS.filter((s) => allowed.has(s.key));
+  return SCREENS.filter((s) => !ADMIN_ONLY_SCREENS.has(s.key) && allowed.has(s.key));
 }

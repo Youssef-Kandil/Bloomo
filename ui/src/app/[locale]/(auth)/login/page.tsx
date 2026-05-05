@@ -21,8 +21,8 @@ export default function LoginPage() {
   async function onSubmit(e: FormEvent): Promise<void> {
     e.preventDefault();
     try {
-      await login.mutateAsync({ email, password });
-      router.push('/dashboard/overview');
+      const user = await login.mutateAsync({ email, password });
+      router.push(user.role === 'OWNER' ? '/system/overview' : '/dashboard/overview');
     } catch {
       /* error surfaced via login.error */
     }

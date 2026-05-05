@@ -33,6 +33,15 @@ export const authModel = {
         where: { id: user.id },
         data: { companyId: company.id },
       });
+      const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      await tx.subscription.create({
+        data: {
+          companyId: company.id,
+          plan: 'TRIAL',
+          status: 'TRIALING',
+          trialEndsAt: trialEnd,
+        },
+      });
       return { user: updated, companyId: company.id };
     });
   },

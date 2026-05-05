@@ -2,9 +2,17 @@
 
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { Trash2, UserPlus } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { Link } from '@/i18n/routing';
-import { useRequests } from '@/hooks/queries/requests';
+import { AssignTechnicianDrawer } from '@/components/shared/AssignTechnicianDrawer';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { Button } from '@/components/ui/button';
+import {
+  useDeleteRequest,
+  useRequests,
+  type ServiceRequest,
+} from '@/hooks/queries/requests';
 
 const STATUSES = ['', 'PENDING', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
 
@@ -12,6 +20,20 @@ export default function RequestsPage() {
   const t = useTranslations();
   const [status, setStatus] = useState<string>('');
   const list = useRequests(status || undefined);
+  const [assignTarget, setAssignTarget] = useState<ServiceRequest | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ServiceRequest | null>(null);
+  const deleteMut = useDeleteRequest();
+
+  async function onDeleteConfirm(): Promise<void> {
+    if (!deleteTarget) return;
+    try {
+      await deleteMut.mutateAsync(deleteTarget.id);
+      toast.success(t('requests.deleteSuccess'));
+      setDeleteTarget(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('requests.deleteError'));
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -24,9 +46,11 @@ export default function RequestsPage() {
         </select>
       </header>
 
-      <div className="card overflow-x-auto">
+      <div>
         {list.isLoading && <p className="text-fg-muted">{t('common.loading')}</p>}
         {list.data?.items?.length === 0 && <p className="text-fg-muted">{t('common.empty')}</p>}
+      </div>
+      <div className="scroll-tbl">
         <table className="w-full text-sm">
           <thead className="text-fg-muted text-xs uppercase">
             <tr>
@@ -45,15 +69,54 @@ export default function RequestsPage() {
                 <td className="py-2">{r.status}</td>
                 <td className="py-2 text-xs text-fg-muted">{new Date(r.createdAt).toLocaleString()}</td>
                 <td className="py-2 text-end">
-                  <Link href={`/dashboard/requests/${r.id}`} className="text-primary hover:underline">
-                    {t('common.edit')}
-                  </Link>
+                  <div className="inline-flex items-center gap-2">
+                    {(r.status === 'PENDING' || r.status === 'ASSIGNED') && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAssignTarget(r)}
+                      >
+                        <UserPlus className="size-3.5" />
+                        {t('requests.assignTechnician')}
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteTarget(r)}
+                      aria-label={t('common.delete')}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <AssignTechnicianDrawer
+        request={assignTarget}
+        open={!!assignTarget}
+        onOpenChange={(open) => !open && setAssignTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={t('requests.confirmDeleteTitle')}
+        description={t('requests.confirmDeleteDescription', {
+          name: deleteTarget?.client?.name ?? '',
+        })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={deleteMut.isPending}
+        onConfirm={onDeleteConfirm}
+      />
     </div>
   );
 }

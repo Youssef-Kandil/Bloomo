@@ -18,6 +18,8 @@ import { payrollRouter } from '@/features/payroll/payroll.routes';
 import { salaryAdvanceRouter } from '@/features/salary-advance/salary-advance.routes';
 import { permissionsRouter } from '@/features/permissions/permissions.routes';
 import { rankingRouter } from '@/features/ranking/ranking.routes';
+import { subscriptionRouter } from '@/features/subscription/subscription.routes';
+import { systemRouter } from '@/features/system/system.routes';
 import { ratingsRouter } from '@/features/ratings/ratings.routes';
 import { requestsRouter } from '@/features/requests/requests.routes';
 import { supplyRouter } from '@/features/supply/supply.routes';
@@ -68,6 +70,8 @@ export function createApp(): Application {
   api.use('/supply', supplyRouter);
   api.use('/requests', requestsRouter);
   api.use('/ranking', rankingRouter);
+  api.use('/subscription', subscriptionRouter);
+  api.use('/system', systemRouter);
   api.use('/tasks', tasksRouter);
   api.use('/attendance', attendanceRouter);
   api.use('/off-day-requests', offDayRouter);

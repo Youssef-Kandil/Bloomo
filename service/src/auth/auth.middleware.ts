@@ -52,7 +52,7 @@ export function requirePermission(screenKey: string, action: PermissionAction = 
     }
     const { id, role } = req.user;
 
-    if (role === 'ADMIN') {
+    if (role === 'ADMIN' || role === 'OWNER') {
       next();
       return;
     }

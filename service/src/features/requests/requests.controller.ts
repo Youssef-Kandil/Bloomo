@@ -34,17 +34,22 @@ export const requestsController = {
   },
 
   async assign(req: Request, res: Response): Promise<void> {
-    const assignment = await requestsService.assign(
+    const assignments = await requestsService.assign(
       companyId(req),
       param(req, 'id'),
       req.user!.id,
       req.body as AssignRequestInput,
     );
-    res.status(201).json({ assignment });
+    res.status(201).json({ assignments });
   },
 
   async cancel(req: Request, res: Response): Promise<void> {
     await requestsService.cancel(companyId(req), param(req, 'id'));
+    res.status(204).end();
+  },
+
+  async remove(req: Request, res: Response): Promise<void> {
+    await requestsService.remove(companyId(req), param(req, 'id'));
     res.status(204).end();
   },
 };

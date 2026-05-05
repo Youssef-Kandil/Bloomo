@@ -22,22 +22,41 @@ export interface TreasurySummary {
   balance: number;
 }
 
-const LIST_KEY = ['treasury'] as const;
-const SUMMARY_KEY = ['treasury', 'summary'] as const;
+export interface DateRange {
+  from?: string; // ISO yyyy-mm-dd
+  to?: string;
+}
 
-export function useTreasuryEntries() {
+const KEY = 'treasury';
+
+function rangeParams(range: DateRange): Record<string, string> {
+  const out: Record<string, string> = { pageSize: '500' };
+  if (range.from) out.from = range.from;
+  if (range.to) out.to = range.to;
+  return out;
+}
+
+export function useTreasuryEntries(range: DateRange = {}) {
   return useQuery({
-    queryKey: LIST_KEY,
+    queryKey: [KEY, 'list', range.from ?? '', range.to ?? ''],
     queryFn: async () =>
-      (await api.get<{ items: TreasuryEntry[] }>('/api/treasury')).data.items,
+      (
+        await api.get<{ items: TreasuryEntry[] }>('/api/treasury', {
+          params: rangeParams(range),
+        })
+      ).data.items,
   });
 }
 
-export function useTreasurySummary() {
+export function useTreasurySummary(range: DateRange = {}) {
   return useQuery({
-    queryKey: SUMMARY_KEY,
+    queryKey: [KEY, 'summary', range.from ?? '', range.to ?? ''],
     queryFn: async () =>
-      (await api.get<TreasurySummary>('/api/treasury/summary')).data,
+      (
+        await api.get<TreasurySummary>('/api/treasury/summary', {
+          params: rangeParams(range),
+        })
+      ).data,
   });
 }
 
@@ -53,8 +72,7 @@ export function useCreateTreasuryEntry() {
     mutationFn: async (input: CreateEntryInput) =>
       (await api.post<{ entry: TreasuryEntry }>('/api/treasury', input)).data.entry,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: LIST_KEY });
-      qc.invalidateQueries({ queryKey: SUMMARY_KEY });
+      qc.invalidateQueries({ queryKey: [KEY] });
     },
   });
 }

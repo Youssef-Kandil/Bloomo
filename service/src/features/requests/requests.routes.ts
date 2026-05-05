@@ -36,3 +36,9 @@ requestsRouter.post(
   requireRole('ADMIN', 'MANAGER'),
   asyncHandler(requestsController.cancel),
 );
+
+requestsRouter.delete(
+  '/:id',
+  requireRole('ADMIN', 'MANAGER'),
+  asyncHandler(requestsController.remove),
+);

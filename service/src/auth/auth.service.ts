@@ -69,6 +69,7 @@ export const authService = {
   async login(input: LoginInput): Promise<AuthResult> {
     const user = await authModel.findUserByEmail(input.email);
     if (!user || !user.active) throw AppError.unauthorized('Invalid credentials');
+    if (user.bannedAt) throw AppError.forbidden('Account is banned');
     const ok = await verifyPassword(user.passwordHash, input.password);
     if (!ok) throw AppError.unauthorized('Invalid credentials');
     return issueTokens(user);

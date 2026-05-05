@@ -145,9 +145,9 @@ export default function ToolsPage() {
             ) : filtered.length === 0 ? (
               <p className="p-8 text-sm text-muted-foreground text-center">{t('tools.empty')}</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="scroll-tbl">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+                  <thead className="text-muted-foreground text-xs uppercase tracking-wide">
                     <tr>
                       <th className="text-start font-medium px-5 py-3">{t('tools.name')}</th>
                       <th className="text-start font-medium px-5 py-3">{t('tools.code')}</th>
@@ -204,9 +204,9 @@ export default function ToolsPage() {
                 {t('tools.custodyEmpty')}
               </p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="scroll-tbl">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+                  <thead className="text-muted-foreground text-xs uppercase tracking-wide">
                     <tr>
                       <th className="text-start font-medium px-5 py-3">{t('tools.name')}</th>
                       <th className="text-start font-medium px-5 py-3">

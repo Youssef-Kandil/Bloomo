@@ -30,6 +30,8 @@ export interface RankedCandidate {
   distanceMeters: number | null;
   distanceDisplay: string;
   distancePoints: number;
+  /** 1-based position among peers by distance (1 = closest). null when ping stale. */
+  distanceRank: number | null;
   ratingBonus: number;
   usedCriterion: RatingCriterion;
   withinStartRadius: boolean;
@@ -69,9 +71,11 @@ function pickRating(history: HistoricalRating): {
 }
 
 /**
- * Rank candidates for a request. Distance points are RELATIVE to the candidate
- * set (closest → 6, farthest → 0, linear between). Rating bonus is the MAX of
- * the two criteria (not additive). Total is clamped to 10.
+ * Rank candidates for a request. Distance points are awarded by RANK among
+ * fresh candidates: closest = MAX_DISTANCE_POINTS, second = MAX-1, etc, down
+ * to 0. Tied distances share the same rank (dense ranking — next distinct
+ * distance gets the next rank, not "skip"). Stale pings get rank=null and
+ * 0 points. Rating bonus is the MAX of the two criteria. Total clamped to 10.
  */
 export function rankCandidates(
   candidates: CandidateInput[],
@@ -92,22 +96,26 @@ export function rankCandidates(
     return { c, fresh, dist };
   });
 
-  const freshWithDist = measured.filter((m) => m.fresh && m.dist);
-  const distances = freshWithDist.map((m) => m.dist!.meters);
-  const dMin = distances.length ? Math.min(...distances) : 0;
-  const dMax = distances.length ? Math.max(...distances) : 0;
+  // Compute distance ranks (dense ranking) among fresh-with-distance candidates.
+  const freshWithDist = measured
+    .filter((m) => m.fresh && m.dist)
+    .sort((a, b) => a.dist!.meters - b.dist!.meters);
+
+  const rankByEmpId = new Map<string, number>();
+  let currentRank = 0;
+  let prevDistance = -Infinity;
+  for (const m of freshWithDist) {
+    if (m.dist!.meters !== prevDistance) {
+      currentRank++;
+      prevDistance = m.dist!.meters;
+    }
+    rankByEmpId.set(m.c.employeeId, currentRank);
+  }
 
   const results: RankedCandidate[] = measured.map(({ c, fresh, dist }) => {
-    let distancePoints = 0;
-    if (fresh && dist) {
-      if (freshWithDist.length === 1) {
-        distancePoints = MAX_DISTANCE_POINTS;
-      } else if (dMax === dMin) {
-        distancePoints = MAX_DISTANCE_POINTS;
-      } else {
-        distancePoints = MAX_DISTANCE_POINTS * ((dMax - dist.meters) / (dMax - dMin));
-      }
-    }
+    const rank = rankByEmpId.get(c.employeeId) ?? null;
+    const distancePoints =
+      rank !== null ? Math.max(0, MAX_DISTANCE_POINTS - (rank - 1)) : 0;
 
     const rating = pickRating(c.history);
     const total = Math.min(MAX_TOTAL, distancePoints + rating.points);
@@ -117,6 +125,7 @@ export function rankCandidates(
       distanceMeters: dist ? dist.m : null,
       distanceDisplay: dist ? dist.display : '—',
       distancePoints: round2(distancePoints),
+      distanceRank: rank,
       ratingBonus: rating.points,
       usedCriterion: rating.criterion,
       withinStartRadius: dist !== null && dist.meters <= ctx.startRadiusM,

@@ -31,16 +31,47 @@ describe('rankCandidates', () => {
     expect(r.total).toBeGreaterThanOrEqual(6);
   });
 
-  it('assigns 6 to closest, 0 to farthest, interpolates between', () => {
+  it('awards rank-based distance points: closest=6, next=5, next=4 …', () => {
     const close = fresh({ employeeId: 'close', employeeLocation: { lat: 30.0, lng: 31.0 } });
     const mid = fresh({ employeeId: 'mid', employeeLocation: { lat: 30.005, lng: 31.005 } });
     const far = fresh({ employeeId: 'far', employeeLocation: { lat: 30.05, lng: 31.05 } });
     const ranked = rankCandidates([far, mid, close], baseCtx);
     const byId = Object.fromEntries(ranked.map((r) => [r.employeeId, r]));
     expect(byId.close.distancePoints).toBe(6);
-    expect(byId.far.distancePoints).toBe(0);
-    expect(byId.mid.distancePoints).toBeGreaterThan(0);
-    expect(byId.mid.distancePoints).toBeLessThan(6);
+    expect(byId.close.distanceRank).toBe(1);
+    expect(byId.mid.distancePoints).toBe(5);
+    expect(byId.mid.distanceRank).toBe(2);
+    expect(byId.far.distancePoints).toBe(4);
+    expect(byId.far.distanceRank).toBe(3);
+  });
+
+  it('shares rank for tied distances (dense ranking)', () => {
+    const a = fresh({ employeeId: 'a', employeeLocation: { lat: 30.0, lng: 31.0 } });
+    const b = fresh({ employeeId: 'b', employeeLocation: { lat: 30.0, lng: 31.0 } });
+    const c = fresh({ employeeId: 'c', employeeLocation: { lat: 30.05, lng: 31.05 } });
+    const ranked = rankCandidates([a, b, c], baseCtx);
+    const byId = Object.fromEntries(ranked.map((r) => [r.employeeId, r]));
+    expect(byId.a.distanceRank).toBe(1);
+    expect(byId.b.distanceRank).toBe(1);
+    expect(byId.c.distanceRank).toBe(2);
+    expect(byId.a.distancePoints).toBe(6);
+    expect(byId.b.distancePoints).toBe(6);
+    expect(byId.c.distancePoints).toBe(5);
+  });
+
+  it('caps distance points at 0 when more than 6 ranks deep', () => {
+    const cands = Array.from({ length: 9 }, (_, i) =>
+      fresh({
+        employeeId: `e${i}`,
+        employeeLocation: { lat: 30.0 + i * 0.01, lng: 31.0 },
+      }),
+    );
+    const ranked = rankCandidates(cands, baseCtx);
+    const byId = Object.fromEntries(ranked.map((r) => [r.employeeId, r]));
+    expect(byId.e0.distancePoints).toBe(6); // rank 1
+    expect(byId.e5.distancePoints).toBe(1); // rank 6
+    expect(byId.e6.distancePoints).toBe(0); // rank 7+
+    expect(byId.e8.distancePoints).toBe(0); // rank 9
   });
 
   it('uses MAX rule between same-client and same-client-same-type bonuses', () => {

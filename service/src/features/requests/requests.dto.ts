@@ -21,9 +21,9 @@ export const clientSelfRequestDto = z.object({
 });
 
 export const assignRequestDto = z.object({
-  employeeId: z.string().min(1),
-  plannedStart: z.coerce.date(),
-  plannedEnd: z.coerce.date(),
+  employeeIds: z.array(z.string().min(1)).min(1),
+  plannedStart: z.coerce.date().optional(),
+  plannedEnd: z.coerce.date().optional(),
 });
 
 export const listRequestsDto = z.object({

@@ -57,4 +57,8 @@ export const requestsModel = {
   createAssignment(data: Prisma.AssignmentUncheckedCreateInput) {
     return prisma.assignment.create({ data });
   },
+
+  remove(id: string) {
+    return prisma.request.delete({ where: { id } });
+  },
 };

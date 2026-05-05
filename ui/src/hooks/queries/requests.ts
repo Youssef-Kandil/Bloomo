@@ -59,6 +59,8 @@ export interface RankedCandidate {
   distanceMeters: number | null;
   distanceDisplay: string;
   distancePoints: number;
+  /** 1-based position among peers by distance (1 = closest). null when ping is stale. */
+  distanceRank: number | null;
   ratingBonus: number;
   usedCriterion: string;
   withinStartRadius: boolean;
@@ -90,10 +92,24 @@ export function useCreateRequest() {
   });
 }
 
+export function useDeleteRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/requests/${id}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: requestsKeys.all }),
+  });
+}
+
 export function useAssignRequest(requestId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { employeeId: string; plannedStart: string; plannedEnd: string }) => {
+    mutationFn: async (vars: {
+      employeeIds: string[];
+      plannedStart?: string;
+      plannedEnd?: string;
+    }) => {
       const res = await api.post(`/api/requests/${requestId}/assign`, vars);
       return res.data;
     },

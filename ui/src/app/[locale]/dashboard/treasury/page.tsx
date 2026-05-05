@@ -13,6 +13,7 @@ import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { DateRangeFilter, rangeFromPreset, type DateRangeValue } from '@/components/shared/DateRangeFilter';
 import { DetailDrawer } from '@/components/shared/DetailDrawer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,8 +40,13 @@ function errorMessage(err: unknown): string {
 
 export default function TreasuryPage() {
   const t = useTranslations();
-  const summary = useTreasurySummary();
-  const list = useTreasuryEntries();
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => ({
+    preset: 'currentMonth',
+    ...rangeFromPreset('currentMonth'),
+  }));
+  const range = { from: dateRange.from, to: dateRange.to };
+  const summary = useTreasurySummary(range);
+  const list = useTreasuryEntries(range);
   const createMut = useCreateTreasuryEntry();
 
   const [drawer, setDrawer] = useState<DrawerState>(null);
@@ -80,6 +86,10 @@ export default function TreasuryPage() {
           </Button>
         </div>
       </motion.header>
+
+      <motion.div variants={item}>
+        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+      </motion.div>
 
       <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard
@@ -136,9 +146,9 @@ export default function TreasuryPage() {
                 {t('treasury.empty')}
               </p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="scroll-tbl">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+                  <thead className="text-muted-foreground text-xs uppercase tracking-wide">
                     <tr>
                       <th className="text-start font-medium px-5 py-3">{t('treasury.when')}</th>
                       <th className="text-start font-medium px-5 py-3">{t('treasury.kind')}</th>

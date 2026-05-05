@@ -1,5 +1,6 @@
 import { prisma } from '@/config/prisma';
 import { AppError } from '@/lib/http-error';
+import { ensureExpenseFitsMonth } from '@/features/treasury/treasury.guards';
 
 import type { DecideAdvanceInput, SubmitAdvanceInput } from './salary-advance.dto';
 
@@ -7,6 +8,14 @@ export const salaryAdvanceService = {
   async submit(employeeId: string, input: SubmitAdvanceInput) {
     const user = await prisma.user.findUnique({ where: { id: employeeId } });
     if (!user || !user.companyId) throw AppError.forbidden('No company context');
+    const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+    const monthlySalary = employee?.monthlySalary ?? 0;
+    const cap = monthlySalary * 0.6;
+    if (cap > 0 && input.amount > cap) {
+      throw AppError.badRequest(
+        `Advance cannot exceed 60% of monthly salary (limit ${cap.toFixed(0)})`,
+      );
+    }
     return prisma.salaryAdvance.create({
       data: {
         companyId: user.companyId,
@@ -78,9 +87,10 @@ export const salaryAdvanceService = {
       });
     }
 
-    // Approval path: enforce cap against monthly salary.
+    // Approval path: cap total approved advances at 60% of monthly salary.
     const employee = req.employee;
     const monthlySalary = employee.monthlySalary ?? 0;
+    const cap = monthlySalary * 0.6;
     const existingSum = await prisma.salaryAdvance.aggregate({
       where: {
         employeeId: req.employeeId,
@@ -91,11 +101,14 @@ export const salaryAdvanceService = {
       _sum: { amount: true },
     });
     const already = existingSum._sum.amount ?? 0;
-    if (already + req.amount > monthlySalary) {
+    if (already + req.amount > cap) {
       throw AppError.badRequest(
-        'Advance would exceed this month salary cap',
+        `Advance exceeds 60% cap of monthly salary (limit ${cap.toFixed(0)}, already approved ${already.toFixed(0)}, requested ${req.amount})`,
       );
     }
+
+    // The treasury expense created by approval must fit within month income.
+    await ensureExpenseFitsMonth(companyId, req.amount);
 
     // Atomically: mark approved, create treasury expense, link them.
     return prisma.$transaction(async (tx) => {

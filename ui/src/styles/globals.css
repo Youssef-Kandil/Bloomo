@@ -136,3 +136,44 @@
 .bloomo-name-tooltip::before {
   border-top-color: hsl(var(--border-hsl)) !important;
 }
+
+
+/* ============== Print styles ============== */
+.print-only { display: none; }
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body { background: #fff !important; color: #000 !important; }
+  .no-print, header.h-14, aside, nav { display: none !important; }
+  .print-only { display: block !important; }
+  main { padding: 0 !important; }
+  .print-container, table, .card, [class*="rounded-2xl"] {
+    box-shadow: none !important;
+    border-color: #ccc !important;
+  }
+  .shadow-soft, .shadow-elevated, .shadow-glow { box-shadow: none !important; }
+  .bg-card, .bg-muted\/20, .bg-muted\/30, .bg-muted\/40 { background: #fff !important; }
+  thead { background: #f3f3f3 !important; }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; page-break-after: auto; }
+  .print-header { border-bottom: 2px solid #000 !important; padding-bottom: 6mm !important; margin-bottom: 6mm !important; }
+}
+
+
+/* ============== Scrollable table wrapper ============== */
+.scroll-tbl {
+  max-height: 36rem;
+  overflow: auto;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border-hsl));
+}
+.scroll-tbl > table { width: 100%; }
+.scroll-tbl > table > thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: hsl(var(--card));
+  box-shadow: inset 0 -1px 0 hsl(var(--border-hsl));
+}
+@media print {
+  .scroll-tbl { max-height: none !important; overflow: visible !important; border: 0 !important; }
+}

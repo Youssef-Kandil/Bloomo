@@ -3,9 +3,15 @@
 import axios from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import {
+  TableSearch,
+  TableShell,
+  TableToolbar,
+  stickyTheadClass,
+} from '@/components/shared/TableShell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -106,64 +112,15 @@ export default function AttendancePage() {
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('nav.attendance')}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
-              <tr>
-                {isStaff && <th className="text-start font-medium px-5 py-3">{t('employees.name')}</th>}
-                <th className="text-start font-medium px-5 py-3">{t('attendance.type')}</th>
-                <th className="text-start font-medium px-5 py-3">{t('attendance.when')}</th>
-                <th className="text-start font-medium px-5 py-3">{t('common.status')}</th>
-                {isStaff && <th className="text-end font-medium px-5 py-3">{t('common.actions')}</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {list.data?.map((r) => (
-                <tr key={r.id} className="hover:bg-muted/50">
-                  {isStaff && (
-                    <td className="px-5 py-3">{r.employee?.user.name ?? '—'}</td>
-                  )}
-                  <td className="px-5 py-3">
-                    {r.type === 'CHECK_IN' ? t('attendance.checkIn') : t('attendance.checkOut')}
-                  </td>
-                  <td className="px-5 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                    {new Date(r.requestedAt).toLocaleString()}
-                  </td>
-                  <td className="px-5 py-3">{statusBadge(r.status, t)}</td>
-                  {isStaff && (
-                    <td className="px-5 py-3 text-end">
-                      {r.status === 'PENDING' && (
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" onClick={() => decide.mutate({ id: r.id, approve: true })}>
-                            {t('tasks.approve')}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              const reason = prompt(t('attendance.rejectReason'));
-                              if (reason) decide.mutate({ id: r.id, approve: false, reason });
-                            }}
-                          >
-                            {t('tasks.reject')}
-                          </Button>
-                        </div>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {list.data?.length === 0 && (
-            <p className="p-6 text-sm text-muted-foreground text-center">{t('common.empty')}</p>
-          )}
-        </CardContent>
-      </Card>
+      <AttendanceTable
+        rows={list.data ?? []}
+        isStaff={isStaff}
+        onApprove={(id) => decide.mutate({ id, approve: true })}
+        onReject={(id) => {
+          const reason = prompt(t('attendance.rejectReason'));
+          if (reason) decide.mutate({ id, approve: false, reason });
+        }}
+      />
 
       {isEmployee && <EmployeeOffDaySection />}
       {isStaff && <StaffOffDaySection />}
@@ -177,6 +134,115 @@ export default function AttendancePage() {
       {isEmployee && <EmployeeAdvanceSection />}
       {isStaff && <StaffAdvanceSection />}
     </div>
+  );
+}
+
+function AttendanceTable({
+  rows,
+  isStaff,
+  onApprove,
+  onReject,
+}: {
+  rows: AttendanceRow[];
+  isStaff: boolean;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [search, setSearch] = useState('');
+  const [type, setType] = useState<'ALL' | 'CHECK_IN' | 'CHECK_OUT'>('ALL');
+  const [status, setStatus] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+
+  const filtered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (type !== 'ALL' && r.type !== type) return false;
+      if (status !== 'ALL' && r.status !== status) return false;
+      if (s) {
+        const hay = `${r.employee?.user.name ?? ''} ${r.requestedAt}`.toLowerCase();
+        if (!hay.includes(s)) return false;
+      }
+      return true;
+    });
+  }, [rows, search, type, status]);
+
+  const selectClass =
+    'rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring h-9';
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('nav.attendance')}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <TableToolbar>
+          <TableSearch
+            value={search}
+            onChange={setSearch}
+            placeholder={t('attendance.searchPlaceholder')}
+          />
+          <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className={selectClass}>
+            <option value="ALL">{t('attendance.filterAllTypes')}</option>
+            <option value="CHECK_IN">{t('attendance.checkIn')}</option>
+            <option value="CHECK_OUT">{t('attendance.checkOut')}</option>
+          </select>
+          <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className={selectClass}>
+            <option value="ALL">{t('attendance.filterAllStatuses')}</option>
+            <option value="PENDING">{t('attendance.pending')}</option>
+            <option value="APPROVED">{t('attendance.approved')}</option>
+            <option value="REJECTED">{t('attendance.rejected')}</option>
+          </select>
+          <span className="text-xs text-muted-foreground ms-auto">
+            {filtered.length} / {rows.length}
+          </span>
+        </TableToolbar>
+
+        <TableShell maxHeight="32rem">
+          <table className="w-full text-sm">
+            <thead className={stickyTheadClass}>
+              <tr>
+                {isStaff && <th className="text-start font-medium px-5 py-3">{t('employees.name')}</th>}
+                <th className="text-start font-medium px-5 py-3">{t('attendance.type')}</th>
+                <th className="text-start font-medium px-5 py-3">{t('attendance.when')}</th>
+                <th className="text-start font-medium px-5 py-3">{t('common.status')}</th>
+                {isStaff && <th className="text-end font-medium px-5 py-3">{t('common.actions')}</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((r) => (
+                <tr key={r.id} className="hover:bg-muted/50">
+                  {isStaff && <td className="px-5 py-3">{r.employee?.user.name ?? '—'}</td>}
+                  <td className="px-5 py-3">
+                    {r.type === 'CHECK_IN' ? t('attendance.checkIn') : t('attendance.checkOut')}
+                  </td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(r.requestedAt).toLocaleString()}
+                  </td>
+                  <td className="px-5 py-3">{statusBadge(r.status, t)}</td>
+                  {isStaff && (
+                    <td className="px-5 py-3 text-end">
+                      {r.status === 'PENDING' && (
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" onClick={() => onApprove(r.id)}>
+                            {t('tasks.approve')}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => onReject(r.id)}>
+                            {t('tasks.reject')}
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filtered.length === 0 && (
+            <p className="p-6 text-sm text-muted-foreground text-center">{t('common.empty')}</p>
+          )}
+        </TableShell>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -232,9 +298,9 @@ function EmployeeOffDaySection(): React.ReactElement {
         </div>
 
         {(list.data?.length ?? 0) > 0 && (
-          <div className="overflow-x-auto">
+          <div className="scroll-tbl">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+              <thead className="text-muted-foreground text-xs uppercase tracking-wide">
                 <tr>
                   <th className="text-start font-medium px-3 py-2">{t('offDay.date')}</th>
                   <th className="text-start font-medium px-3 py-2">{t('offDay.reason')}</th>
@@ -283,7 +349,7 @@ function StaffOffDaySection(): React.ReactElement {
       <CardHeader>
         <CardTitle>{t('offDay.pending')}</CardTitle>
       </CardHeader>
-      <CardContent className="p-0 overflow-x-auto">
+      <CardContent className="p-0 max-h-[36rem] overflow-auto">
         {list.isLoading ? (
           <div className="p-6 space-y-2">
             {Array.from({ length: 2 }).map((_, i) => (
@@ -294,7 +360,7 @@ function StaffOffDaySection(): React.ReactElement {
           <p className="p-6 text-sm text-muted-foreground text-center">{t('offDay.empty')}</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+            <thead className="sticky top-0 z-10 bg-card text-muted-foreground text-xs uppercase tracking-wide border-b border-border">
               <tr>
                 <th className="text-start font-medium px-5 py-3">{t('employees.name')}</th>
                 <th className="text-start font-medium px-5 py-3">{t('offDay.date')}</th>
@@ -387,9 +453,9 @@ function EmployeeOvertimeSection(): React.ReactElement {
         </div>
 
         {(list.data?.length ?? 0) > 0 && (
-          <div className="overflow-x-auto">
+          <div className="scroll-tbl">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+              <thead className="text-muted-foreground text-xs uppercase tracking-wide">
                 <tr>
                   <th className="text-start font-medium px-3 py-2">{t('overtime.date')}</th>
                   <th className="text-start font-medium px-3 py-2">{t('overtime.start')}</th>
@@ -440,12 +506,12 @@ function StaffOvertimeSection(): React.ReactElement {
       <CardHeader>
         <CardTitle>{t('overtime.pending')}</CardTitle>
       </CardHeader>
-      <CardContent className="p-0 overflow-x-auto">
+      <CardContent className="p-0 max-h-[36rem] overflow-auto">
         {(list.data?.length ?? 0) === 0 ? (
           <p className="p-6 text-sm text-muted-foreground text-center">{t('offDay.empty')}</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+            <thead className="sticky top-0 z-10 bg-card text-muted-foreground text-xs uppercase tracking-wide border-b border-border">
               <tr>
                 <th className="text-start font-medium px-5 py-3">{t('employees.name')}</th>
                 <th className="text-start font-medium px-5 py-3">{t('overtime.date')}</th>
@@ -519,9 +585,9 @@ function EmployeeLeaveSection(): React.ReactElement {
         </div>
 
         {(list.data?.length ?? 0) > 0 && (
-          <div className="overflow-x-auto">
+          <div className="scroll-tbl">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+              <thead className="text-muted-foreground text-xs uppercase tracking-wide">
                 <tr>
                   <th className="text-start font-medium px-3 py-2">{t('leave.fromDate')}</th>
                   <th className="text-start font-medium px-3 py-2">{t('leave.toDate')}</th>
@@ -570,12 +636,12 @@ function StaffLeaveSection(): React.ReactElement {
   return (
     <Card>
       <CardHeader><CardTitle>{t('leave.pending')}</CardTitle></CardHeader>
-      <CardContent className="p-0 overflow-x-auto">
+      <CardContent className="p-0 max-h-[36rem] overflow-auto">
         {(list.data?.length ?? 0) === 0 ? (
           <p className="p-6 text-sm text-muted-foreground text-center">{t('offDay.empty')}</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+            <thead className="sticky top-0 z-10 bg-card text-muted-foreground text-xs uppercase tracking-wide border-b border-border">
               <tr>
                 <th className="text-start font-medium px-5 py-3">{t('employees.name')}</th>
                 <th className="text-start font-medium px-5 py-3">{t('leave.fromDate')}</th>
@@ -657,9 +723,9 @@ function EmployeeAdvanceSection(): React.ReactElement {
         </div>
 
         {(list.data?.length ?? 0) > 0 && (
-          <div className="overflow-x-auto">
+          <div className="scroll-tbl">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+              <thead className="text-muted-foreground text-xs uppercase tracking-wide">
                 <tr>
                   <th className="text-start font-medium px-3 py-2">{t('advance.month')}</th>
                   <th className="text-end font-medium px-3 py-2">{t('advance.amount')}</th>
@@ -708,12 +774,12 @@ function StaffAdvanceSection(): React.ReactElement {
   return (
     <Card>
       <CardHeader><CardTitle>{t('advance.pending')}</CardTitle></CardHeader>
-      <CardContent className="p-0 overflow-x-auto">
+      <CardContent className="p-0 max-h-[36rem] overflow-auto">
         {(list.data?.length ?? 0) === 0 ? (
           <p className="p-6 text-sm text-muted-foreground text-center">{t('offDay.empty')}</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+            <thead className="sticky top-0 z-10 bg-card text-muted-foreground text-xs uppercase tracking-wide border-b border-border">
               <tr>
                 <th className="text-start font-medium px-5 py-3">{t('employees.name')}</th>
                 <th className="text-start font-medium px-5 py-3">{t('advance.month')}</th>

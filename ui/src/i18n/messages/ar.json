@@ -34,7 +34,7 @@
     "attendance": "الحضور والانصراف",
     "treasury": "الخزنة",
     "payroll": "الرواتب",
-    "whatsapp": "واتساب",
+    "plans": "الباقات",
     "settings": "الإعدادات",
     "newRequest": "طلب جديد",
     "myTasks": "مهامي"
@@ -71,7 +71,10 @@
     "pending": "قيد المراجعة",
     "approved": "معتمد",
     "rejected": "مرفوض",
-    "rejectReason": "سبب الرفض"
+    "rejectReason": "سبب الرفض",
+    "searchPlaceholder": "ابحث باسم الموظف…",
+    "filterAllTypes": "كل الأنواع",
+    "filterAllStatuses": "كل الحالات"
   },
   "payroll": {
     "description": "حساب الرواتب بناءً على جدول الحضور والخصومات الشهرية.",
@@ -96,7 +99,19 @@
     "breakdown": "تفاصيل يوم بيوم",
     "offDay": "أجازة",
     "offDayApproved": "أجازة معتمدة",
-    "noRows": "لا توجد بيانات"
+    "noRows": "لا توجد بيانات",
+    "print": "طباعة",
+    "backToList": "رجوع لقائمة الرواتب",
+    "payslipFor": "كشف راتب",
+    "totalsBreakdown": "تفصيل الصافي",
+    "dailyBreakdown": "تفاصيل يومية",
+    "salaryAdvance": "السلفة",
+    "totalLateMinutes": "إجمالي دقائق التأخير",
+    "totalEarlyMinutes": "إجمالي دقائق الانصراف المبكر",
+    "totalOvertimeHours": "إجمالي ساعات الأوفر تايم",
+    "totalOffDayHours": "إجمالي ساعات يوم الأجازة",
+    "generatedAt": "تاريخ الإصدار",
+    "period": "فترة الراتب"
   },
   "overtime": {
     "myRequests": "طلبات الأوفر تايم",
@@ -452,5 +467,330 @@
     "addPhone": "إضافة رقم",
     "noPhones": "لا توجد أرقام هاتف",
     "phoneInvalid": "رقم هاتف غير صالح"
+  },
+  "errors": {
+    "notAuthorized": {
+      "title": "غير مصرّح بالدخول",
+      "description": "هذه الصفحة غير متاحة لحسابك. لو كنت تظن أن هذا خطأ، تواصل مع المسؤول.",
+      "goBack": "العودة للوحة التحكم",
+      "reasonOwnerOnly": "هذه الصفحة لمالك النظام فقط.",
+      "reasonAdminOnly": "هذه الصفحة للأدمن فقط.",
+      "reasonNoPermission": "ليس لديك صلاحية لعرض هذه الشاشة."
+    }
+  },
+  "dateFilter": {
+    "from": "من",
+    "to": "إلى",
+    "clear": "إلغاء الفلتر",
+    "presets": {
+      "all": "الكل",
+      "today": "اليوم",
+      "yesterday": "أمس",
+      "currentWeek": "الأسبوع الحالي",
+      "currentMonth": "الشهر الحالي",
+      "previousMonth": "الشهر السابق",
+      "last7": "آخر 7 أيام",
+      "last15": "آخر 15 يوم",
+      "last30": "آخر 30 يوم",
+      "last3Months": "آخر 3 شهور",
+      "last6Months": "آخر 6 شهور",
+      "custom": "نطاق مخصص"
+    }
+  },
+  "system": {
+    "title": "لوحة مالك النظام",
+    "nav": {
+      "overview": "نظرة عامة",
+      "companies": "الشركات",
+      "users": "المستخدمون",
+      "plans": "الباقات",
+      "offers": "العروض",
+      "requests": "طلبات التواصل"
+    },
+    "common": {
+      "manage": "إدارة",
+      "notFound": "غير موجود",
+      "error": "حدث خطأ"
+    },
+    "statuses": {
+      "TRIALING": "تجربة",
+      "ACTIVE": "مفعّل",
+      "EXPIRED": "منتهي",
+      "PENDING_ACTIVATION": "قيد التفعيل"
+    },
+    "overview": {
+      "title": "نظرة عامة",
+      "subtitle": "ملخّص حالة النظام",
+      "tiles": {
+        "companies": "الشركات",
+        "users": "المستخدمون",
+        "activeSubscriptions": "اشتراكات مفعّلة",
+        "pendingRequests": "طلبات قيد المراجعة"
+      }
+    },
+    "companies": {
+      "title": "الشركات",
+      "subtitle": "إدارة كل شركات النظام واشتراكاتها",
+      "searchPlaceholder": "ابحث باسم الشركة أو إيميل المالك…",
+      "empty": "لا توجد شركات",
+      "back": "رجوع للقائمة",
+      "col": {
+        "name": "الشركة",
+        "owner": "المالك",
+        "plan": "الباقة",
+        "status": "الحالة",
+        "users": "مستخدمين",
+        "clients": "عملاء"
+      },
+      "detail": {
+        "createdAt": "تاريخ الإنشاء",
+        "owner": "المالك",
+        "subscription": "تفاصيل الاشتراك",
+        "currentPlan": "الباقة الحالية",
+        "endsOn": "ينتهي في",
+        "customLimits": "حدود مخصصة",
+        "users": "المستخدمون"
+      },
+      "actions": {
+        "activateTitle": "تفعيل / تغيير الباقة",
+        "activateCta": "تفعيل",
+        "activateSuccess": "تم تفعيل الباقة",
+        "extendTitle": "تمديد الفترة",
+        "extendCta": "تمديد",
+        "extendSuccess": "تم التمديد",
+        "limitsTitle": "حدود مخصصة",
+        "limitsHint": "اتركها فاضية لاستخدام حدود الباقة الافتراضية.",
+        "limitsCta": "حفظ الحدود",
+        "limitsSuccess": "تم تحديث الحدود",
+        "useDefault": "افتراضي",
+        "plan": "الباقة",
+        "cycle": "الدورة",
+        "cycleMonthly": "شهري",
+        "cycleYearly": "سنوي",
+        "days": "عدد الأيام",
+        "clientsLimit": "حد العملاء",
+        "employeesLimit": "حد الموظفين",
+        "branchesLimit": "حد الفروع",
+        "error": "تعذّر تنفيذ الإجراء"
+      }
+    },
+    "users": {
+      "title": "المستخدمون",
+      "subtitle": "كل مستخدمي النظام مع البحث وإدارة الحالة",
+      "searchPlaceholder": "ابحث بالاسم أو الإيميل…",
+      "empty": "لا يوجد مستخدمون مطابقون",
+      "filter": { "allRoles": "كل الأدوار" },
+      "col": {
+        "name": "الاسم",
+        "email": "البريد",
+        "role": "الدور",
+        "company": "الشركة",
+        "status": "الحالة"
+      },
+      "activeTag": "نشط",
+      "bannedTag": "محظور",
+      "banCta": "حظر",
+      "unbanCta": "إلغاء الحظر",
+      "banDialogTitle": "حظر {name}؟",
+      "banDialogDescription": "سيتم منع {email} من تسجيل الدخول.",
+      "banReason": "السبب (اختياري)",
+      "banReasonPlaceholder": "مخالفة سياسة الاستخدام…",
+      "banSuccess": "تم حظر المستخدم",
+      "unbanSuccess": "تم رفع الحظر",
+      "resetTitle": "تعيين كلمة مرور جديدة",
+      "resetDescription": "سيتم تعيين كلمة مرور جديدة لـ {email} وتسجيل خروجه من كل الجلسات. أعطه الكلمة الجديدة بأمان.",
+      "newPassword": "كلمة المرور الجديدة",
+      "newPasswordHint": "8 أحرف على الأقل",
+      "passwordRequirement": "ستحتاج لإعطاءها للمستخدم بعد الحفظ.",
+      "passwordTooShort": "كلمة المرور يجب أن تكون 8 أحرف على الأقل",
+      "resetCta": "تعيين",
+      "resetSuccess": "تم التعيين. الكلمة الجديدة: {password}",
+      "cancel": "إلغاء"
+    },
+    "plans": {
+      "title": "إدارة الباقات",
+      "subtitle": "تعديل الأسعار والحدود وحالة كل باقة",
+      "name": "اسم الباقة",
+      "tagline": "وصف قصير",
+      "monthlyPrice": "السعر الشهري",
+      "yearlyPrice": "السعر السنوي",
+      "currency": "العملة",
+      "clientsLimit": "حد العملاء",
+      "employeesLimit": "حد الموظفين",
+      "branchesLimit": "حد الفروع",
+      "active": "نشط",
+      "highlight": "مميّز",
+      "save": "حفظ التغييرات",
+      "saved": "تم حفظ التعديلات",
+      "saveError": "تعذّر الحفظ"
+    },
+    "offers": {
+      "title": "العروض والخصومات",
+      "subtitle": "إدارة كوبونات الخصم على الباقات",
+      "createCta": "إضافة عرض",
+      "createTitle": "إضافة عرض جديد",
+      "editTitle": "تعديل العرض",
+      "code": "الكود",
+      "titleField": "العنوان",
+      "description": "الوصف",
+      "discountPercent": "نسبة الخصم %",
+      "validFrom": "يبدأ من",
+      "validUntil": "ينتهي في",
+      "appliesTo": "يطبّق على",
+      "allPlans": "كل الباقات",
+      "appliesHint": "اتركها فاضية لتطبيق العرض على جميع الباقات.",
+      "activeField": "الحالة",
+      "active": "نشط",
+      "inactive": "موقوف",
+      "status": "الحالة",
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "delete": "حذف",
+      "createSuccess": "تم إنشاء العرض",
+      "updateSuccess": "تم تحديث العرض",
+      "deleteSuccess": "تم حذف العرض",
+      "confirmDeleteTitle": "حذف العرض؟",
+      "confirmDeleteDescription": "سيتم حذف العرض \"{code}\" نهائياً.",
+      "empty": "لا توجد عروض",
+      "error": "تعذّر تنفيذ الإجراء"
+    },
+    "requests": {
+      "title": "طلبات التواصل مع المبيعات",
+      "subtitle": "كل طلبات تفعيل الباقات من العملاء",
+      "approve": "قبول",
+      "reject": "رفض",
+      "approved": "تم قبول الطلب",
+      "rejected": "تم رفض الطلب",
+      "empty": "لا توجد طلبات",
+      "error": "تعذّر التحديث",
+      "status": {
+        "PENDING": "قيد المراجعة",
+        "APPROVED": "مقبول",
+        "REJECTED": "مرفوض"
+      }
+    }
+  },
+  "plans": {
+    "title": "خطط الاشتراك",
+    "subtitle": "اختر الباقة المناسبة لشركتك. التفعيل يتم عبر فريق المبيعات.",
+    "adminOnly": "هذه الشاشة متاحة لمسؤول الشركة (الأدمن) فقط.",
+    "mostPopular": "الأكثر شيوعاً",
+    "currentPlan": "الباقة الحالية",
+    "currentPlanLabel": "باقتك الحالية",
+    "expiresOn": "تنتهي في {date}",
+    "expiredOn": "انتهت في {date}",
+    "renew": "تجديد الاشتراك",
+    "pendingActivation": "بانتظار التفعيل…",
+    "contactSales": "تواصل مع المبيعات",
+    "perMonth": "شهر",
+    "perYear": "سنة",
+    "contactForPrice": "السعر بحسب الاتفاق",
+    "confirmTitle": "إرسال طلب التواصل",
+    "confirmDescription": "سيتم إرسال طلب لتفعيل باقة {plan} ({cycle}) لفريق المبيعات وسيتواصلون معك قريباً.",
+    "confirmSend": "إرسال",
+    "confirmCancel": "إلغاء",
+    "contactSuccess": "تم إرسال طلبك، سيتواصل معك فريق المبيعات",
+    "contactError": "تعذّر إرسال الطلب",
+    "names": {
+      "TRIAL": "تجربة مجانية",
+      "BASIC": "Basic",
+      "PRO": "Pro",
+      "ENTERPRISE": "Enterprise"
+    },
+    "tagline": {
+      "TRIAL": "للتجربة لمدة 30 يوماً",
+      "BASIC": "للأعمال الناشئة",
+      "PRO": "للفرق المتوسطة والنامية",
+      "ENTERPRISE": "للشركات الكبرى"
+    },
+    "cycle": {
+      "MONTHLY": "شهري",
+      "YEARLY": "سنوي",
+      "saveHint": "وفّر 17%"
+    },
+    "limits": {
+      "clients": "حتى {n} عميل",
+      "employees": "حتى {n} موظف",
+      "branches": "حتى {n} فرع"
+    },
+    "features": {
+      "fullSuite": "كل وحدات المنصة",
+      "support": "دعم فني"
+    },
+    "banner": {
+      "trialingTitle": "أنت في الفترة التجريبية المجانية",
+      "trialingDesc": "متبقي {days} يوماً قبل انتهاء التجربة. اختر باقة لمتابعة الاستخدام بدون انقطاع.",
+      "activeTitle": "اشتراكك مفعّل",
+      "activeDesc": "متبقي {days} يوماً على نهاية الدورة الحالية.",
+      "pendingTitle": "طلبك قيد المراجعة",
+      "pendingDesc": "أرسلت طلب تواصل ومن المفترض يصلك رد من فريق المبيعات قريباً.",
+      "expiredTitle": "انتهى اشتراكك",
+      "expiredDesc": "للمتابعة، تواصل مع المبيعات لتفعيل باقة جديدة."
+    },
+    "contactForm": {
+      "title": "تواصل مع المبيعات",
+      "subtitle": "طلب تفعيل باقة {plan} — {cycle}",
+      "name": "اسم المسؤول",
+      "email": "البريد الإلكتروني",
+      "phone": "رقم الهاتف",
+      "note": "ملاحظات (اختياري)",
+      "cancel": "إلغاء",
+      "submit": "إرسال الطلب"
+    },
+    "custom": {
+      "title": "تحتاج باقة مخصصة؟",
+      "subtitle": "نقدر نفصّل خطة بحدود تناسب حجم شركتك بالظبط.",
+      "cta": "طلب باقة مخصصة",
+      "formTitle": "طلب باقة مخصصة",
+      "formSubtitle": "حدد احتياجاتك وسيتواصل معك فريق المبيعات لتحديد التفاصيل والسعر.",
+      "clientsField": "عدد العملاء المتوقع",
+      "employeesField": "عدد الموظفين المتوقع"
+    }
+  },
+  "requests": {
+    "assignTechnician": "تعيين فني",
+    "confirmDeleteTitle": "حذف الطلب",
+    "confirmDeleteDescription": "سيتم حذف طلب العميل \"{name}\" نهائياً مع كل التفاصيل المرتبطة. لا يمكن التراجع عن هذا الإجراء.",
+    "deleteSuccess": "تم حذف الطلب",
+    "deleteError": "تعذّر حذف الطلب",
+    "assign": {
+      "title": "تعيين فني للطلب",
+      "searchPlaceholder": "ابحث عن فني…",
+      "emptyList": "لا يوجد فنيون مطابقون",
+      "select": "اختيار",
+      "deselect": "إلغاء الاختيار",
+      "assign": "تعيين",
+      "assignWithCount": "تعيين ({count})",
+      "cancel": "إلغاء",
+      "successAssigned": "تم تعيين {count} فني بنجاح",
+      "errorAssign": "تعذّر تعيين الفنيين",
+      "yes": "نعم",
+      "no": "لا",
+      "staleLocation": "آخر موقع قديم",
+      "pointsLine": "النقاط {total}/10 · المسافة {distance} + التقييم {rating}",
+      "sort": {
+        "recommended": "ترشيح النظام",
+        "closest": "الأقرب أولاً",
+        "history": "تعامل مسبق مع نفس العميل",
+        "topRated": "الأعلى تقييماً"
+      },
+      "criterion": {
+        "none": "بدون سجل سابق",
+        "same_client": "تعامل سابق مع نفس العميل",
+        "same_client_same_type": "تعامل سابق · نفس نوع الطلب"
+      },
+      "detail": {
+        "distance": "المسافة",
+        "distanceRank": "ترتيب القرب",
+        "rankValue": "#{n}",
+        "distancePoints": "نقاط المسافة",
+        "ratingPoints": "نقاط التقييم",
+        "criterion": "معيار التقييم",
+        "startRadius": "داخل نطاق البدء",
+        "freshness": "حداثة الموقع",
+        "fresh": "حديث",
+        "stale": "قديم"
+      }
+    }
   }
 }

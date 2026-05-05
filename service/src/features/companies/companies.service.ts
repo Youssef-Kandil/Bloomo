@@ -1,4 +1,5 @@
 import { AppError } from '@/lib/http-error';
+import { ensureWithinLimit } from '@/features/subscription/subscription.guards';
 
 import { companiesModel } from './companies.model';
 import type { CreateBranchInput, UpdateBranchInput, UpdateCompanyInput } from './companies.dto';
@@ -15,7 +16,8 @@ export const companiesService = {
   listBranches(companyId: string) {
     return companiesModel.listBranches(companyId);
   },
-  createBranch(companyId: string, input: CreateBranchInput) {
+  async createBranch(companyId: string, input: CreateBranchInput) {
+    await ensureWithinLimit(companyId, 'branches');
     return companiesModel.createBranch({
       companyId,
       name: input.name,

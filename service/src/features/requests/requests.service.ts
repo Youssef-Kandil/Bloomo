@@ -75,48 +75,59 @@ export const requestsService = {
       throw AppError.conflict('Request is finalized');
     }
 
-    const employee = await prisma.employee.findUnique({
-      where: { id: input.employeeId },
+    const employees = await prisma.employee.findMany({
+      where: { id: { in: input.employeeIds } },
       include: { user: true },
     });
-    if (!employee || employee.user.companyId !== companyId) {
-      throw AppError.notFound('Employee not found');
+    const validEmployees = employees.filter((e) => e.user.companyId === companyId);
+    if (validEmployees.length !== input.employeeIds.length) {
+      throw AppError.notFound('One or more employees not found');
     }
 
-    if (input.plannedEnd <= input.plannedStart) {
+    const plannedStart = input.plannedStart ?? new Date();
+    const plannedEnd =
+      input.plannedEnd ?? new Date(plannedStart.getTime() + 2 * 60 * 60 * 1000);
+
+    if (plannedEnd <= plannedStart) {
       throw AppError.badRequest('plannedEnd must be after plannedStart');
     }
 
-    const assignment = await requestsModel.createAssignment({
-      requestId,
-      employeeId: input.employeeId,
-      plannedStart: input.plannedStart,
-      plannedEnd: input.plannedEnd,
-      assignedByUserId,
-    });
+    const assignments = await Promise.all(
+      validEmployees.map((emp) =>
+        requestsModel.createAssignment({
+          requestId,
+          employeeId: emp.id,
+          plannedStart,
+          plannedEnd,
+          assignedByUserId,
+        }),
+      ),
+    );
     await requestsModel.update(requestId, { status: 'ASSIGNED' });
     await requestsModel.appendHistory(requestId, 'ASSIGNED', {
-      employeeId: input.employeeId,
-      plannedStart: input.plannedStart,
-      plannedEnd: input.plannedEnd,
+      employeeIds: validEmployees.map((e) => e.id),
+      plannedStart,
+      plannedEnd,
     });
 
-    whatsappQueue.enqueueForClient(request.clientId, 'TECH_ASSIGNED', {
-      employeeName: employee.user.name,
-      requestId,
-    });
+    for (const emp of validEmployees) {
+      whatsappQueue.enqueueForClient(request.clientId, 'TECH_ASSIGNED', {
+        employeeName: emp.user.name,
+        requestId,
+      });
+      whatsappQueue.enqueueForEmployee(emp.id, 'EMP_TASK_ASSIGNED', {
+        requestId,
+        clientName: request.client.name,
+        address: request.client.address,
+        plannedStart,
+      });
+    }
     whatsappQueue.enqueueForClient(request.clientId, 'ETA', {
-      plannedStart: input.plannedStart,
-      plannedEnd: input.plannedEnd,
+      plannedStart,
+      plannedEnd,
       requestId,
     });
-    whatsappQueue.enqueueForEmployee(input.employeeId, 'EMP_TASK_ASSIGNED', {
-      requestId,
-      clientName: request.client.name,
-      address: request.client.address,
-      plannedStart: input.plannedStart,
-    });
-    return assignment;
+    return assignments;
   },
 
   async cancel(companyId: string, requestId: string) {
@@ -125,5 +136,11 @@ export const requestsService = {
     if (request.status === 'COMPLETED') throw AppError.conflict('Already completed');
     await requestsModel.update(requestId, { status: 'CANCELLED' });
     await requestsModel.appendHistory(requestId, 'CANCELLED');
+  },
+
+  async remove(companyId: string, requestId: string) {
+    const request = await requestsModel.findById(companyId, requestId);
+    if (!request) throw AppError.notFound('Request not found');
+    await requestsModel.remove(requestId);
   },
 };

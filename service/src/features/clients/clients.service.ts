@@ -1,4 +1,5 @@
 import { AppError } from '@/lib/http-error';
+import { ensureWithinLimit } from '@/features/subscription/subscription.guards';
 
 import { clientsModel } from './clients.model';
 import type { ClientQuery, CreateClientInput, UpdateClientInput } from './clients.dto';
@@ -23,6 +24,7 @@ export const clientsService = {
   },
 
   async create(companyId: string, input: CreateClientInput) {
+    await ensureWithinLimit(companyId, 'clients');
     return clientsModel.create(companyId, {
       company: { connect: { id: companyId } },
       name: input.name,

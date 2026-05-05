@@ -164,9 +164,9 @@ export default function InventoryPage() {
             ) : filtered.length === 0 ? (
               <p className="p-8 text-sm text-muted-foreground text-center">{t('inventory.empty')}</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-auto max-h-[34rem]">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+                  <thead className="sticky top-0 z-10 bg-card text-muted-foreground text-xs uppercase tracking-wide border-b border-border">
                     <tr>
                       <th className="text-start font-medium px-5 py-3">{t('inventory.name')}</th>
                       <th className="text-start font-medium px-5 py-3">{t('inventory.sku')}</th>
@@ -543,9 +543,9 @@ export default function InventoryPage() {
                 {t('inventory.noOperations')}
               </p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="scroll-tbl">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+                  <thead className="text-muted-foreground text-xs uppercase tracking-wide">
                     <tr>
                       <th className="text-start font-medium px-5 py-3">
                         {t('inventory.client')}

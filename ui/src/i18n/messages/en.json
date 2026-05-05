@@ -34,7 +34,7 @@
     "attendance": "Attendance",
     "treasury": "Treasury",
     "payroll": "Payroll",
-    "whatsapp": "WhatsApp",
+    "plans": "Plans",
     "settings": "Settings",
     "newRequest": "New request",
     "myTasks": "My tasks"
@@ -71,7 +71,10 @@
     "pending": "Pending",
     "approved": "Approved",
     "rejected": "Rejected",
-    "rejectReason": "Rejection reason"
+    "rejectReason": "Rejection reason",
+    "searchPlaceholder": "Search by employee name…",
+    "filterAllTypes": "All types",
+    "filterAllStatuses": "All statuses"
   },
   "payroll": {
     "description": "Monthly salary computation based on attendance and deductions.",
@@ -96,7 +99,19 @@
     "breakdown": "Day-by-day breakdown",
     "offDay": "Off day",
     "offDayApproved": "Off day (approved)",
-    "noRows": "No data"
+    "noRows": "No data",
+    "print": "Print",
+    "backToList": "Back to payroll",
+    "payslipFor": "Payslip for",
+    "totalsBreakdown": "Net breakdown",
+    "dailyBreakdown": "Daily breakdown",
+    "salaryAdvance": "Salary advance",
+    "totalLateMinutes": "Total late minutes",
+    "totalEarlyMinutes": "Total early-leave minutes",
+    "totalOvertimeHours": "Total overtime hours",
+    "totalOffDayHours": "Total off-day hours",
+    "generatedAt": "Generated at",
+    "period": "Pay period"
   },
   "overtime": {
     "myRequests": "Overtime requests",
@@ -452,5 +467,330 @@
     "addPhone": "Add phone",
     "noPhones": "No phone numbers",
     "phoneInvalid": "Invalid phone number"
+  },
+  "errors": {
+    "notAuthorized": {
+      "title": "Not authorized",
+      "description": "You don't have permission to access this page. If you think this is a mistake, contact your administrator.",
+      "goBack": "Back to dashboard",
+      "reasonOwnerOnly": "This page is for the system owner only.",
+      "reasonAdminOnly": "This page is for company admins only.",
+      "reasonNoPermission": "You don't have permission to view this screen."
+    }
+  },
+  "dateFilter": {
+    "from": "From",
+    "to": "To",
+    "clear": "Clear filter",
+    "presets": {
+      "all": "All time",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "currentWeek": "This week",
+      "currentMonth": "This month",
+      "previousMonth": "Previous month",
+      "last7": "Last 7 days",
+      "last15": "Last 15 days",
+      "last30": "Last 30 days",
+      "last3Months": "Last 3 months",
+      "last6Months": "Last 6 months",
+      "custom": "Custom range"
+    }
+  },
+  "system": {
+    "title": "System owner",
+    "nav": {
+      "overview": "Overview",
+      "companies": "Companies",
+      "users": "Users",
+      "plans": "Plans",
+      "offers": "Offers",
+      "requests": "Sales requests"
+    },
+    "common": {
+      "manage": "Manage",
+      "notFound": "Not found",
+      "error": "Something went wrong"
+    },
+    "statuses": {
+      "TRIALING": "Trialing",
+      "ACTIVE": "Active",
+      "EXPIRED": "Expired",
+      "PENDING_ACTIVATION": "Pending"
+    },
+    "overview": {
+      "title": "Overview",
+      "subtitle": "System health snapshot",
+      "tiles": {
+        "companies": "Companies",
+        "users": "Users",
+        "activeSubscriptions": "Active subscriptions",
+        "pendingRequests": "Pending requests"
+      }
+    },
+    "companies": {
+      "title": "Companies",
+      "subtitle": "Manage all companies and their subscriptions",
+      "searchPlaceholder": "Search by company name or owner email…",
+      "empty": "No companies found",
+      "back": "Back to list",
+      "col": {
+        "name": "Company",
+        "owner": "Owner",
+        "plan": "Plan",
+        "status": "Status",
+        "users": "Users",
+        "clients": "Clients"
+      },
+      "detail": {
+        "createdAt": "Created",
+        "owner": "Owner",
+        "subscription": "Subscription",
+        "currentPlan": "Current plan",
+        "endsOn": "Ends on",
+        "customLimits": "Custom limits",
+        "users": "Users"
+      },
+      "actions": {
+        "activateTitle": "Activate / change plan",
+        "activateCta": "Activate",
+        "activateSuccess": "Plan activated",
+        "extendTitle": "Extend period",
+        "extendCta": "Extend",
+        "extendSuccess": "Subscription extended",
+        "limitsTitle": "Custom limits",
+        "limitsHint": "Leave blank to use the plan's defaults.",
+        "limitsCta": "Save limits",
+        "limitsSuccess": "Limits updated",
+        "useDefault": "default",
+        "plan": "Plan",
+        "cycle": "Billing cycle",
+        "cycleMonthly": "Monthly",
+        "cycleYearly": "Yearly",
+        "days": "Days",
+        "clientsLimit": "Clients limit",
+        "employeesLimit": "Employees limit",
+        "branchesLimit": "Branches limit",
+        "error": "Action failed"
+      }
+    },
+    "users": {
+      "title": "Users",
+      "subtitle": "All users across the system with search and moderation tools",
+      "searchPlaceholder": "Search by name or email…",
+      "empty": "No matching users",
+      "filter": { "allRoles": "All roles" },
+      "col": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "company": "Company",
+        "status": "Status"
+      },
+      "activeTag": "Active",
+      "bannedTag": "Banned",
+      "banCta": "Ban",
+      "unbanCta": "Unban",
+      "banDialogTitle": "Ban {name}?",
+      "banDialogDescription": "{email} will no longer be able to log in.",
+      "banReason": "Reason (optional)",
+      "banReasonPlaceholder": "Policy violation…",
+      "banSuccess": "User banned",
+      "unbanSuccess": "User unbanned",
+      "resetTitle": "Reset password",
+      "resetDescription": "A new password will be set for {email} and they'll be signed out of all sessions. Share the new password securely.",
+      "newPassword": "New password",
+      "newPasswordHint": "8+ characters",
+      "passwordRequirement": "You'll need to share this with the user after saving.",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "resetCta": "Reset",
+      "resetSuccess": "Done. New password: {password}",
+      "cancel": "Cancel"
+    },
+    "plans": {
+      "title": "Plan catalog",
+      "subtitle": "Edit pricing, limits and visibility for each plan",
+      "name": "Plan name",
+      "tagline": "Tagline",
+      "monthlyPrice": "Monthly price",
+      "yearlyPrice": "Yearly price",
+      "currency": "Currency",
+      "clientsLimit": "Clients limit",
+      "employeesLimit": "Employees limit",
+      "branchesLimit": "Branches limit",
+      "active": "Active",
+      "highlight": "Highlight",
+      "save": "Save changes",
+      "saved": "Changes saved",
+      "saveError": "Could not save"
+    },
+    "offers": {
+      "title": "Offers & coupons",
+      "subtitle": "Manage discount codes for plans",
+      "createCta": "New offer",
+      "createTitle": "New offer",
+      "editTitle": "Edit offer",
+      "code": "Code",
+      "titleField": "Title",
+      "description": "Description",
+      "discountPercent": "Discount %",
+      "validFrom": "Valid from",
+      "validUntil": "Valid until",
+      "appliesTo": "Applies to",
+      "allPlans": "All plans",
+      "appliesHint": "Leave empty to apply to all plans.",
+      "activeField": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "status": "Status",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "createSuccess": "Offer created",
+      "updateSuccess": "Offer updated",
+      "deleteSuccess": "Offer deleted",
+      "confirmDeleteTitle": "Delete offer?",
+      "confirmDeleteDescription": "Offer \"{code}\" will be permanently deleted.",
+      "empty": "No offers yet",
+      "error": "Action failed"
+    },
+    "requests": {
+      "title": "Sales contact requests",
+      "subtitle": "All plan-activation requests from customers",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approved": "Request approved",
+      "rejected": "Request rejected",
+      "empty": "No requests",
+      "error": "Could not update",
+      "status": {
+        "PENDING": "Pending",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected"
+      }
+    }
+  },
+  "plans": {
+    "title": "Subscription plans",
+    "subtitle": "Pick the plan that fits your team. Activation is handled by our sales team.",
+    "adminOnly": "This screen is available to the company admin only.",
+    "mostPopular": "Most popular",
+    "currentPlan": "Current plan",
+    "currentPlanLabel": "Your plan",
+    "expiresOn": "Expires on {date}",
+    "expiredOn": "Expired on {date}",
+    "renew": "Renew subscription",
+    "pendingActivation": "Pending activation…",
+    "contactSales": "Contact sales",
+    "perMonth": "month",
+    "perYear": "year",
+    "contactForPrice": "Custom pricing",
+    "confirmTitle": "Send contact request",
+    "confirmDescription": "We'll forward your request for the {plan} plan ({cycle}) to our sales team and they will reach out shortly.",
+    "confirmSend": "Send",
+    "confirmCancel": "Cancel",
+    "contactSuccess": "Request sent. Our sales team will be in touch.",
+    "contactError": "Could not send request",
+    "names": {
+      "TRIAL": "Free trial",
+      "BASIC": "Basic",
+      "PRO": "Pro",
+      "ENTERPRISE": "Enterprise"
+    },
+    "tagline": {
+      "TRIAL": "30-day free trial",
+      "BASIC": "For small businesses",
+      "PRO": "For growing teams",
+      "ENTERPRISE": "For large organizations"
+    },
+    "cycle": {
+      "MONTHLY": "Monthly",
+      "YEARLY": "Yearly",
+      "saveHint": "Save 17%"
+    },
+    "limits": {
+      "clients": "Up to {n} clients",
+      "employees": "Up to {n} employees",
+      "branches": "Up to {n} branches"
+    },
+    "features": {
+      "fullSuite": "Full platform suite",
+      "support": "Email & chat support"
+    },
+    "banner": {
+      "trialingTitle": "You're on the free trial",
+      "trialingDesc": "{days} days left before the trial ends. Pick a plan to keep going without interruption.",
+      "activeTitle": "Your subscription is active",
+      "activeDesc": "{days} days left in the current period.",
+      "pendingTitle": "Your request is under review",
+      "pendingDesc": "Your contact request has been sent. Sales will follow up shortly.",
+      "expiredTitle": "Your subscription has expired",
+      "expiredDesc": "Contact sales to activate a plan and continue using Bloomo."
+    },
+    "contactForm": {
+      "title": "Contact sales",
+      "subtitle": "Activation request for {plan} — {cycle}",
+      "name": "Contact name",
+      "email": "Email",
+      "phone": "Phone",
+      "note": "Notes (optional)",
+      "cancel": "Cancel",
+      "submit": "Send request"
+    },
+    "custom": {
+      "title": "Need a custom plan?",
+      "subtitle": "We can tailor limits to match the exact size of your business.",
+      "cta": "Request custom plan",
+      "formTitle": "Custom plan request",
+      "formSubtitle": "Tell us your needs and our sales team will reach out with a tailored offer.",
+      "clientsField": "Expected number of clients",
+      "employeesField": "Expected number of employees"
+    }
+  },
+  "requests": {
+    "assignTechnician": "Assign technician",
+    "confirmDeleteTitle": "Delete request",
+    "confirmDeleteDescription": "The request from \"{name}\" and all related details will be permanently deleted. This action cannot be undone.",
+    "deleteSuccess": "Request deleted",
+    "deleteError": "Could not delete request",
+    "assign": {
+      "title": "Assign technician to request",
+      "searchPlaceholder": "Search technicians…",
+      "emptyList": "No matching technicians",
+      "select": "Select",
+      "deselect": "Deselect",
+      "assign": "Assign",
+      "assignWithCount": "Assign ({count})",
+      "cancel": "Cancel",
+      "successAssigned": "Assigned {count} technician(s) successfully",
+      "errorAssign": "Could not assign technicians",
+      "yes": "Yes",
+      "no": "No",
+      "staleLocation": "Stale location",
+      "pointsLine": "Score {total}/10 · distance {distance} + rating {rating}",
+      "sort": {
+        "recommended": "System recommended",
+        "closest": "Closest first",
+        "history": "Previous with same client",
+        "topRated": "Highest rated"
+      },
+      "criterion": {
+        "none": "No prior history",
+        "same_client": "Previous work with same client",
+        "same_client_same_type": "Previous work · same request type"
+      },
+      "detail": {
+        "distance": "Distance",
+        "distanceRank": "Distance rank",
+        "rankValue": "#{n}",
+        "distancePoints": "Distance points",
+        "ratingPoints": "Rating points",
+        "criterion": "Rating criterion",
+        "startRadius": "Within start radius",
+        "freshness": "Location freshness",
+        "fresh": "Fresh",
+        "stale": "Stale"
+      }
+    }
   }
 }

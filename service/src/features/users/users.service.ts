@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/config/prisma';
 import { AppError } from '@/lib/http-error';
 import { hashPassword } from '@/lib/password';
+import { ensureWithinLimit } from '@/features/subscription/subscription.guards';
 
 import { usersModel } from './users.model';
 import type {
@@ -27,6 +28,7 @@ export const usersService = {
     return { items, total };
   },
   async createEmployee(companyId: string, input: CreateEmployeeInput) {
+    await ensureWithinLimit(companyId, 'employees');
     const exists = await usersModel.findByEmail(input.email);
     if (exists) throw AppError.conflict('Email already registered');
     const passwordHash = await hashPassword(input.password);
