@@ -9,6 +9,7 @@ export interface AccessTokenPayload {
   sub: string;
   role: Role;
   companyId: string | null;
+  branchId: string | null;
   type: 'access';
 }
 

@@ -16,11 +16,12 @@ describe('password helpers', () => {
 
 describe('jwt helpers', () => {
   it('signs and verifies an access token', () => {
-    const token = signAccessToken({ sub: 'u1', role: 'ADMIN', companyId: 'c1' });
+    const token = signAccessToken({ sub: 'u1', role: 'ADMIN', companyId: 'c1', branchId: null });
     const payload = verifyAccessToken(token);
     expect(payload.sub).toBe('u1');
     expect(payload.role).toBe('ADMIN');
     expect(payload.companyId).toBe('c1');
+    expect(payload.branchId).toBeNull();
     expect(payload.type).toBe('access');
   });
 
@@ -32,7 +33,7 @@ describe('jwt helpers', () => {
   });
 
   it('rejects access token used as refresh', () => {
-    const access = signAccessToken({ sub: 'u1', role: 'ADMIN', companyId: null });
+    const access = signAccessToken({ sub: 'u1', role: 'ADMIN', companyId: null, branchId: null });
     expect(() => verifyRefreshToken(access)).toThrow();
   });
 

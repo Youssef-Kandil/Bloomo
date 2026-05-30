@@ -9,6 +9,8 @@ export interface ServiceRequest {
   type: string;
   status: string;
   note: string | null;
+  voiceNoteUrl: string | null;
+  voiceDurationMs: number | null;
   createdAt: string;
   client: { id: string; name: string; lat: number; lng: number };
   assignments: Array<{ id: string; employee?: { user?: { name: string } } }>;
@@ -90,7 +92,13 @@ export function useRanking(requestId: string) {
 export function useCreateRequest() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { clientId?: string; type: string; note?: string }) => {
+    mutationFn: async (vars: {
+      clientId?: string;
+      type: string;
+      note?: string;
+      voiceNoteUrl?: string;
+      voiceDurationMs?: number;
+    }) => {
       const res = await api.post<{ request: ServiceRequest }>('/api/requests', vars);
       return res.data.request;
     },

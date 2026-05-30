@@ -14,12 +14,18 @@ import type {
 } from './users.dto';
 
 export const usersService = {
-  async listEmployees(companyId: string, page = 1, pageSize = 50) {
+  async listEmployees(
+    companyId: string,
+    page = 1,
+    pageSize = 50,
+    branchScope?: string | null,
+  ) {
     const [items, total] = await usersModel.listByRole(
       companyId,
       'EMPLOYEE',
       (page - 1) * pageSize,
       pageSize,
+      branchScope ?? undefined,
     );
     return { items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) };
   },
@@ -27,8 +33,21 @@ export const usersService = {
     const [items, total] = await usersModel.listByRole(companyId, 'MANAGER', 0, 200);
     return { items, total };
   },
-  async createEmployee(companyId: string, input: CreateEmployeeInput) {
+  async createEmployee(
+    companyId: string,
+    input: CreateEmployeeInput,
+    branchScope?: string | null,
+  ) {
     await ensureWithinLimit(companyId, 'employees');
+    // When a MANAGER creates an employee, force the employee into the
+    // manager's own branch — ignore any branchId in the request body.
+    const effectiveBranchId = branchScope ?? input.branchId ?? null;
+    if (effectiveBranchId) {
+      const branch = await prisma.branch.findFirst({
+        where: { id: effectiveBranchId, companyId },
+      });
+      if (!branch) throw AppError.notFound('Branch not found');
+    }
     const exists = await usersModel.findByEmail(input.email);
     if (exists) throw AppError.conflict('Email already registered');
     const passwordHash = await hashPassword(input.password);
@@ -42,7 +61,7 @@ export const usersService = {
     });
     await usersModel.createEmployee({
       id: user.id,
-      branchId: input.branchId ?? null,
+      branchId: effectiveBranchId,
       checkInTime: input.checkInTime ?? null,
       checkOutTime: input.checkOutTime ?? null,
       offDays: input.offDays ?? undefined,

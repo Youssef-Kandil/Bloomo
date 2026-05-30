@@ -13,6 +13,7 @@ import {
   Sparkles,
   Tag,
   Users,
+  Wallet,
   X,
 } from 'lucide-react';
 
@@ -38,6 +39,7 @@ const NAV: NavEntry[] = [
   { key: 'plans', href: '/system/plans', labelKey: 'system.nav.plans', icon: CreditCard },
   { key: 'offers', href: '/system/offers', labelKey: 'system.nav.offers', icon: Tag },
   { key: 'requests', href: '/system/requests', labelKey: 'system.nav.requests', icon: Inbox },
+  { key: 'treasury', href: '/system/treasury', labelKey: 'system.nav.treasury', icon: Wallet },
 ];
 
 export default function SystemLayout({ children }: { children: React.ReactNode }) {

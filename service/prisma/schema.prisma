@@ -80,6 +80,23 @@ enum TreasuryKind {
   EXPENSE
 }
 
+enum AppTreasuryKind {
+  INCOME
+  EXPENSE
+}
+
+/// Categories for OWNER-tracked app-level expenses.
+/// SUBSCRIPTION is used as the auto-tag for income from sub activations/extensions.
+enum AppExpenseCategory {
+  INFRASTRUCTURE
+  SALARIES
+  MARKETING
+  TOOLS
+  TAXES
+  REFUND
+  OTHER
+}
+
 enum WaSessionStatus {
   DISCONNECTED
   PAIRING
@@ -231,10 +248,26 @@ model SubscriptionRequest {
   contactEmail String
   contactPhone String?
   note         String?          @db.Text
+
+  // Optional custom-limit ask. When the OWNER approves, these (if present)
+  // override the Plan's defaults on the Subscription.
+  customClientsLimit   Int?
+  customEmployeesLimit Int?
+  customBranchesLimit  Int?
+
+  // PENDING | APPROVED | REJECTED | QUOTED
+  // QUOTED = OWNER has sent a price quote / payment instructions; admin still
+  // needs to act (out of band) before the OWNER moves to APPROVED.
   status       String           @default("PENDING")
+  rejectReason String?          @db.Text
+  ownerMessage String?          @db.Text   // shown in the admin's plan banner (e.g. quote details)
+  decidedAt    DateTime?
+  decidedByUserId String?
+
   createdAt    DateTime         @default(now())
 
   @@index([companyId, createdAt])
+  @@index([companyId, status])
 }
 
 model Branch {
@@ -293,6 +326,7 @@ model User {
   overtimeDecisions   OvertimeRequest[]         @relation("OvertimeDecider")
   leaveDecisions      LeaveRequest[]            @relation("LeaveDecider")
   advanceDecisions    SalaryAdvance[]           @relation("AdvanceDecider")
+  appTreasuryCreated  AppTreasuryEntry[]        @relation("AppTreasuryCreator")
 
   @@index([companyId, role])
 }
@@ -438,6 +472,12 @@ model Request {
   client    Client        @relation(fields: [clientId], references: [id])
   type      RequestType
   note      String?       @db.Text
+  /// Relative URL (e.g. "/uploads/voice-notes/abc.webm") for an optional
+  /// recorded voice note attached at request creation. The file itself
+  /// lives on disk under UPLOAD_DIR — stored as URL only to keep rows
+  /// small and let the file be served with caching headers.
+  voiceNoteUrl     String?  @db.VarChar(255)
+  voiceDurationMs  Int?
   status    RequestStatus @default(PENDING)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
@@ -718,6 +758,29 @@ model TreasuryEntry {
   createdAt       DateTime     @default(now())
 
   @@index([companyId, createdAt])
+}
+
+/// App-level treasury (OWNER scope, not company scope).
+/// Income rows are typically auto-created when OWNER activates/extends a
+/// company subscription. Expense rows are entered manually by OWNER.
+model AppTreasuryEntry {
+  id              String              @id @default(cuid())
+  kind            AppTreasuryKind
+  amount          Float
+  reason          String              @db.Text
+  category        AppExpenseCategory?
+  plan            SubscriptionPlan?
+  billingCycle    BillingCycle?
+  companyId       String?
+  createdByUserId String?
+  createdBy       User?               @relation("AppTreasuryCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime            @default(now())
+
+  @@index([createdAt])
+  @@index([kind, createdAt])
+  @@index([plan, createdAt])
+  @@index([category])
+  @@index([companyId])
 }
 
 model AuditLog {

@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 
+import { AppError } from '@/lib/http-error';
 import { param } from '@/utils/reqParams';
 
 import { systemService } from './system.service';
@@ -46,14 +47,30 @@ export const systemController = {
     const sub = await systemService.activateCompanyPlan(
       param(req, 'id'),
       req.body as ActivatePlanInput,
+      req.user!.id,
     );
     res.json({ subscription: sub });
+  },
+
+  async previewActivation(req: Request, res: Response): Promise<void> {
+    const plan = q(req, 'plan') as 'BASIC' | 'PRO' | 'ENTERPRISE' | undefined;
+    const billingCycle = q(req, 'billingCycle') as 'MONTHLY' | 'YEARLY' | undefined;
+    if (!plan || !billingCycle) {
+      throw AppError.badRequest('plan and billingCycle query params are required');
+    }
+    const preview = await systemService.previewPlanActivation(
+      param(req, 'id'),
+      plan,
+      billingCycle,
+    );
+    res.json({ preview });
   },
 
   async extend(req: Request, res: Response): Promise<void> {
     const sub = await systemService.extendCompany(
       param(req, 'id'),
       req.body as ExtendSubscriptionInput,
+      req.user!.id,
     );
     res.json({ subscription: sub });
   },
@@ -128,6 +145,7 @@ export const systemController = {
     const updated = await systemService.updateSubscriptionRequest(
       param(req, 'id'),
       req.body as SubscriptionRequestUpdateInput,
+      req.user!.id,
     );
     res.json({ request: updated });
   },

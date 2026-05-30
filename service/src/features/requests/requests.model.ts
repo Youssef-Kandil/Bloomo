@@ -3,8 +3,23 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/config/prisma';
 
 export const requestsModel = {
-  list(companyId: string, filters: Prisma.RequestWhereInput, skip: number, take: number) {
+  list(
+    companyId: string,
+    filters: Prisma.RequestWhereInput,
+    skip: number,
+    take: number,
+    branchScope?: string | null,
+  ) {
     const where: Prisma.RequestWhereInput = { companyId, ...filters };
+    // Branch-scoped listing: a manager sees PENDING/unassigned requests
+    // (any branch can claim them) plus any request that already has an
+    // assignment to one of their branch's employees.
+    if (branchScope) {
+      where.OR = [
+        { status: 'PENDING' },
+        { assignments: { some: { employee: { branchId: branchScope } } } },
+      ];
+    }
     return prisma.$transaction([
       prisma.request.findMany({
         where,

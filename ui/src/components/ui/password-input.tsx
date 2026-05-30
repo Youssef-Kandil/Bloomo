@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import { Check, Eye, EyeOff, X } from 'lucide-react';
+import { Check, Eye, EyeOff, X, type LucideIcon } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -44,11 +44,20 @@ export interface PasswordInputProps extends React.InputHTMLAttributes<HTMLInputE
   showRules?: boolean;
   showStrength?: boolean;
   rules?: PasswordRule[];
+  leftIcon?: LucideIcon;
 }
 
 export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
   function PasswordInput(
-    { value, showRules = true, showStrength = true, rules: rulesProp, className, ...props },
+    {
+      value,
+      showRules = true,
+      showStrength = true,
+      rules: rulesProp,
+      leftIcon: LeftIcon,
+      className,
+      ...props
+    },
     ref,
   ) {
     const t = useTranslations('password');
@@ -69,12 +78,15 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
     return (
       <div className="space-y-2">
         <div className="relative">
+          {LeftIcon && (
+            <LeftIcon className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+          )}
           <Input
             ref={ref}
             type={visible ? 'text' : 'password'}
             value={value}
             onBlur={() => setTouched(true)}
-            className={cn('pe-10', className)}
+            className={cn('pe-10', LeftIcon && 'ps-10', className)}
             autoComplete="new-password"
             {...props}
           />

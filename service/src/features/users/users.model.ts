@@ -3,8 +3,22 @@ import type { Prisma, Role } from '@prisma/client';
 import { prisma } from '@/config/prisma';
 
 export const usersModel = {
-  listByRole(companyId: string, role: Role, skip: number, take: number) {
+  listByRole(
+    companyId: string,
+    role: Role,
+    skip: number,
+    take: number,
+    branchId?: string | null,
+  ) {
     const where: Prisma.UserWhereInput = { companyId, role, deletedAt: null };
+    // Branch-scoped listing (used when a MANAGER is the caller): only employees
+    // whose Employee.branchId matches. Other roles ignore branch.
+    if (branchId && role === 'EMPLOYEE') {
+      where.employee = { branchId };
+    }
+    if (branchId && role === 'MANAGER') {
+      where.branchId = branchId;
+    }
     const include =
       role === 'EMPLOYEE'
         ? { employee: { include: { branch: true } } }

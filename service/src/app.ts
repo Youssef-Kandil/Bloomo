@@ -3,6 +3,8 @@ import cors from 'cors';
 import express, { type Application } from 'express';
 import helmet from 'helmet';
 
+import { UPLOAD_DIR } from '@/lib/uploads';
+
 import { authRouter } from '@/auth/auth.routes';
 import { requireAuth } from '@/auth/auth.middleware';
 import { env } from '@/config/env';
@@ -52,6 +54,17 @@ export function createApp(): Application {
   app.get('/health', (_req, res) => {
     res.json({ ok: true, uptime: process.uptime() });
   });
+
+  // User-uploaded files (voice notes, etc). Cached aggressively because the
+  // filenames are random — content is effectively immutable per URL.
+  app.use(
+    '/uploads',
+    express.static(UPLOAD_DIR, {
+      maxAge: '30d',
+      immutable: true,
+      setHeaders: (res) => res.set('Cache-Control', 'public, max-age=2592000, immutable'),
+    }),
+  );
 
   app.use('/auth', authRouter);
 

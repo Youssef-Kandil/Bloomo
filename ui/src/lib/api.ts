@@ -9,6 +9,18 @@ export const api = axios.create({
   withCredentials: true, // refresh cookie
 });
 
+/**
+ * Turn a server-relative path (e.g. `/uploads/voice-notes/xyz.webm` returned
+ * by the API) into an absolute URL that the browser will fetch from the API
+ * server — without this, `<audio src="/uploads/...">` would resolve against
+ * the Next.js frontend origin and 404.
+ */
+export function apiAssetUrl(pathOrUrl: string | null | undefined): string | undefined {
+  if (!pathOrUrl) return undefined;
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  return `${baseURL.replace(/\/$/, '')}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`;
+}
+
 api.interceptors.request.use((config) => {
   const token = tokenStore.get();
   if (token) {

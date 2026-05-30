@@ -8,6 +8,22 @@ export type SubscriptionPlan = 'TRIAL' | 'BASIC' | 'PRO' | 'ENTERPRISE';
 export type BillingCycle = 'MONTHLY' | 'YEARLY';
 export type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'EXPIRED' | 'PENDING_ACTIVATION';
 
+export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'QUOTED';
+
+export interface LatestRequestSummary {
+  id: string;
+  plan: SubscriptionPlan;
+  billingCycle: BillingCycle;
+  status: RequestStatus;
+  rejectReason: string | null;
+  ownerMessage: string | null;
+  customClientsLimit: number | null;
+  customEmployeesLimit: number | null;
+  customBranchesLimit: number | null;
+  decidedAt: string | null;
+  createdAt: string;
+}
+
 export interface CurrentSubscription {
   plan: SubscriptionPlan;
   billingCycle: BillingCycle | null;
@@ -17,7 +33,10 @@ export interface CurrentSubscription {
   daysRemaining: number | null;
   isExpired: boolean;
   limits: { clients: number; employees: number; branches: number };
+  usage: { clients: number; employees: number; branches: number };
+  atLimit: { clients: boolean; employees: boolean; branches: boolean };
   hasCustomLimits?: boolean;
+  latestRequest: LatestRequestSummary | null;
 }
 
 export interface PlanCatalogEntry {
@@ -66,6 +85,9 @@ export interface ContactSalesInput {
   contactEmail: string;
   contactPhone?: string;
   note?: string;
+  customClientsLimit?: number;
+  customEmployeesLimit?: number;
+  customBranchesLimit?: number;
 }
 
 export function useContactSales() {

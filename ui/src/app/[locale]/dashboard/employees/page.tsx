@@ -20,6 +20,7 @@ import { useReverseGeocode } from '@/hooks/useReverseGeocode';
 
 import { EmployeeMarkers } from '@/components/map/EmployeeMarkers';
 import { DetailDrawer, DetailRow } from '@/components/shared/DetailDrawer';
+import { LimitReachedNotice } from '@/components/shared/LimitReachedNotice';
 import { Pagination } from '@/components/shared/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,7 @@ import {
   type Employee,
 } from '@/hooks/queries/employees';
 import { useResource } from '@/hooks/queries/generic';
+import { useCurrentSubscription } from '@/hooks/queries/subscription';
 import { cn } from '@/lib/utils';
 
 const LeafletMap = dynamic(() => import('@/components/map/LeafletMap'), { ssr: false });
@@ -70,6 +72,8 @@ export default function EmployeesPage() {
 
   const [drawer, setDrawer] = useState<DrawerState>(null);
   const [query, setQuery] = useState('');
+  const sub = useCurrentSubscription();
+  const atLimit = sub.data?.atLimit?.employees ?? false;
 
   const filtered = useMemo(() => {
     const items = list.data?.items ?? [];
@@ -129,10 +133,18 @@ export default function EmployeesPage() {
             {list.data?.total ?? 0} · {t('employees.title')}
           </p>
         </div>
-        <Button variant="gradient" onClick={() => setDrawer({ mode: 'create' })}>
-          <Plus className="size-4" />
-          {t('common.create')}
-        </Button>
+        {atLimit && sub.data ? (
+          <LimitReachedNotice
+            resource="employees"
+            used={sub.data.usage?.employees ?? 0}
+            limit={sub.data.limits?.employees ?? 0}
+          />
+        ) : (
+          <Button variant="gradient" onClick={() => setDrawer({ mode: 'create' })}>
+            <Plus className="size-4" />
+            {t('common.create')}
+          </Button>
+        )}
       </motion.header>
 
       <motion.div variants={item}>

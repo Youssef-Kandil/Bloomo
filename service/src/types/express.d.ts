@@ -6,6 +6,7 @@ declare global {
       id: string;
       role: Role;
       companyId: string | null;
+      branchId: string | null;
     }
     interface Request {
       user?: UserContext;

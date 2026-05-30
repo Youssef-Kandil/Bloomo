@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { requirePermission, requireRole } from '@/auth/auth.middleware';
+import { voiceNoteUploader } from '@/lib/uploads';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { validate } from '@/utils/validate';
 
@@ -8,6 +9,16 @@ import { requestsController } from './requests.controller';
 import { assignRequestDto, createRequestDto, listRequestsDto } from './requests.dto';
 
 export const requestsRouter = Router();
+
+// Upload route is intentionally NOT permission-gated beyond `requireAuth`
+// (applied at the mount point) — any authenticated caller, including CLIENT,
+// can upload a voice note to attach to a request. The file URL alone is
+// useless until referenced by a created request.
+requestsRouter.post(
+  '/voice-note',
+  voiceNoteUploader.single('audio'),
+  asyncHandler(requestsController.uploadVoiceNote),
+);
 
 requestsRouter.get(
   '/',

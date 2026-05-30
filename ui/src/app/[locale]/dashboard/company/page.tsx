@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 import { LocationPicker } from '@/components/map/LocationPicker';
 import { DetailDrawer, DetailRow } from '@/components/shared/DetailDrawer';
+import { LimitReachedNotice } from '@/components/shared/LimitReachedNotice';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ import {
   type Branch,
   type BranchInput,
 } from '@/hooks/queries/company';
+import { useCurrentSubscription } from '@/hooks/queries/subscription';
 
 type BranchDrawer =
   | { mode: 'create' }
@@ -37,6 +39,8 @@ export default function CompanyPage() {
 
   const [companyOpen, setCompanyOpen] = useState(false);
   const [branch, setBranch] = useState<BranchDrawer>(null);
+  const sub = useCurrentSubscription();
+  const atBranchLimit = sub.data?.atLimit?.branches ?? false;
 
   const container = {
     hidden: { opacity: 0 },
@@ -101,10 +105,19 @@ export default function CompanyPage() {
                 ({company.data?.branches.length ?? 0})
               </span>
             </CardTitle>
-            <Button variant="gradient" size="sm" onClick={() => setBranch({ mode: 'create' })}>
-              <Plus className="size-4" />
-              {t('common.create')}
-            </Button>
+            {atBranchLimit && sub.data ? (
+              <LimitReachedNotice
+                resource="branches"
+                used={sub.data.usage?.branches ?? 0}
+                limit={sub.data.limits?.branches ?? 0}
+                compact
+              />
+            ) : (
+              <Button variant="gradient" size="sm" onClick={() => setBranch({ mode: 'create' })}>
+                <Plus className="size-4" />
+                {t('common.create')}
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="p-0">
             {company.isLoading ? (

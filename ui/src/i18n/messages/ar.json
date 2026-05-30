@@ -10,6 +10,8 @@
     "resetPassword": "إعادة تعيين كلمة المرور",
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "passwordsDontMatch": "كلمتا المرور غير متطابقتين",
     "name": "الاسم",
     "companyName": "اسم الشركة",
     "submit": "متابعة",
@@ -61,7 +63,20 @@
     "show": "إظهار",
     "hide": "إخفاء",
     "required": "مطلوب",
-    "optional": "اختياري"
+    "optional": "اختياري",
+    "deleted": "تم الحذف"
+  },
+  "limit": {
+    "title": "وصلت للحد الأقصى من {resource}",
+    "description": "باقتك الحالية تسمح بـ {limit} {resource} وإنت مستخدم {used}. تقدر ترقّي الباقة أو تطلب باقة مخصصة.",
+    "descriptionManager": "الشركة وصلت للحد الأقصى من {resource} ({used}/{limit}). تواصل مع الأدمن لترقية الباقة.",
+    "compactMessage": "وصلت للحد الأقصى ({used}/{limit} {resource}).",
+    "upgrade": "ترقية",
+    "resource": {
+      "clients": "عميل",
+      "employees": "موظف",
+      "branches": "فرع"
+    }
   },
   "attendance": {
     "checkIn": "تسجيل حضور",
@@ -537,7 +552,8 @@
       "users": "المستخدمون",
       "plans": "الباقات",
       "offers": "العروض",
-      "requests": "طلبات التواصل"
+      "requests": "طلبات التواصل",
+      "treasury": "الخزنة"
     },
     "common": {
       "manage": "إدارة",
@@ -691,14 +707,102 @@
       "subtitle": "كل طلبات تفعيل الباقات من العملاء",
       "approve": "قبول",
       "reject": "رفض",
-      "approved": "تم قبول الطلب",
+      "approved": "تم قبول الطلب وتفعيل الباقة",
       "rejected": "تم رفض الطلب",
+      "quoted": "تم إرسال عرض السعر للعميل",
+      "sendQuote": "إرسال عرض سعر",
+      "cancel": "إلغاء",
+      "confirmReject": "تأكيد الرفض",
+      "rejectReasonLabel": "سبب الرفض",
+      "rejectReasonPlaceholder": "اشرح للعميل سبب الرفض (سيظهر له في صفحة الباقات)",
+      "rejectReasonHint": "سبب واضح يساعد العميل يفهم ويعدّل طلبه.",
+      "rejectReasonRequired": "سبب الرفض مطلوب (3 أحرف على الأقل)",
+      "ownerMessageLabel": "نص العرض / تعليمات الدفع",
+      "ownerMessagePlaceholder": "مثال: السعر للباقة كذا، برجاء التحويل على الحساب رقم XXX وإرسال صورة التحويل.",
+      "ownerMessageHint": "النص هيظهر للعميل في بانر فوق الباقات.",
+      "ownerMessageRequired": "نص العرض مطلوب (3 أحرف على الأقل)",
+      "requestedCustomLimits": "الحدود المخصصة المطلوبة",
+      "customLimitsApplyNote": "هذه الحدود ستُطبق على اشتراك الشركة عند الموافقة.",
       "empty": "لا توجد طلبات",
       "error": "تعذّر التحديث",
+      "details": "تفاصيل الطلب",
+      "drawerTitle": "تفاصيل طلب {company}",
+      "drawerDesc": "راجع تفاصيل الباقة الحالية والمطلوبة قبل الموافقة.",
+      "contact": "بيانات التواصل",
+      "planComparison": "مقارنة الباقات",
+      "currentPlan": "الباقة الحالية",
+      "currentUsage": "الاستخدام",
+      "requestedPlan": "الباقة المطلوبة",
+      "month": "شهر",
+      "year": "سنة",
+      "cannotApprove": "لا يمكن القبول — الاستخدام الحالي أكبر من حدود الباقة الجديدة",
+      "alreadyDecided": "تم البتّ في هذا الطلب ({status})",
+      "downgradeBlockedTitle": "لا يمكن تفعيل هذه الباقة الآن",
+      "downgradeBlockedDesc": "الاستخدام الحالي للشركة أكبر من حدود باقة {plan}. يجب على الشركة تقليل الاستخدام أولاً.",
+      "downgradeFixHint": "الحلول الممكنة: 1) اطلب من الشركة حذف الزائد. 2) ضع حدوداً مخصصة من شاشة الشركة. 3) اعرض على الشركة باقة أعلى.",
+      "customLimitsNote": "ملاحظة: في حدود مخصصة مفعّلة على اشتراك الشركة — تم استخدامها بدل حدود الباقة الافتراضية.",
+      "over": "أكبر من",
+      "resource": {
+        "clients": "العملاء",
+        "employees": "الموظفون",
+        "branches": "الفروع"
+      },
+      "col": {
+        "contactName": "اسم المسؤول",
+        "contactEmail": "البريد",
+        "contactPhone": "الهاتف",
+        "note": "ملاحظات",
+        "submittedAt": "تاريخ الطلب"
+      },
       "status": {
         "PENDING": "قيد المراجعة",
         "APPROVED": "مقبول",
-        "REJECTED": "مرفوض"
+        "REJECTED": "مرفوض",
+        "QUOTED": "عرض مُرسل"
+      }
+    },
+    "treasury": {
+      "title": "خزنة التطبيق",
+      "subtitle": "الإيرادات والمصروفات على مستوى الأبليكيشن — مع تحليل أكثر الباقات مبيعاً وأكثرها ربحاً.",
+      "addEntry": "إضافة عملية",
+      "addEntryDesc": "أضف مصروف أو إيراد يدوي. الإيرادات من الباقات بتتسجل تلقائياً عند التفعيل أو التمديد.",
+      "addSuccess": "تمت إضافة العملية",
+      "confirmDelete": "هل أنت متأكد من حذف هذه العملية؟",
+      "totalIncome": "إجمالي الإيراد",
+      "totalExpense": "إجمالي المصروف",
+      "net": "الصافي",
+      "bestSellersByCount": "الأكثر مبيعاً (عدد التفعيلات)",
+      "bestSellersByRevenue": "الأكثر تحقيقاً للأرباح",
+      "expenseBreakdown": "توزيع المصروفات",
+      "entries": "كل العمليات",
+      "empty": "لا توجد عمليات في الفترة المختارة",
+      "allPlans": "كل الباقات",
+      "allKinds": "كل الأنواع",
+      "allCategories": "كل التصنيفات",
+      "kind": {
+        "INCOME": "إيراد",
+        "EXPENSE": "مصروف"
+      },
+      "category": {
+        "INFRASTRUCTURE": "بنية تحتية",
+        "SALARIES": "رواتب",
+        "MARKETING": "تسويق",
+        "TOOLS": "أدوات وخدمات",
+        "TAXES": "ضرائب",
+        "REFUND": "استرجاع",
+        "OTHER": "أخرى"
+      },
+      "col": {
+        "date": "التاريخ",
+        "kind": "النوع",
+        "amount": "المبلغ",
+        "reason": "البيان",
+        "tag": "الوسوم",
+        "category": "التصنيف",
+        "plan": "الباقة"
+      },
+      "unit": {
+        "activations": "تفعيل"
       }
     }
   },
@@ -776,8 +880,61 @@
       "formTitle": "طلب باقة مخصصة",
       "formSubtitle": "حدد احتياجاتك وسيتواصل معك فريق المبيعات لتحديد التفاصيل والسعر.",
       "clientsField": "عدد العملاء المتوقع",
-      "employeesField": "عدد الموظفين المتوقع"
+      "employeesField": "عدد الموظفين المتوقع",
+      "branchesField": "عدد الفروع المتوقع"
+    },
+    "requestBanner": {
+      "pendingTitle": "طلبك قيد المراجعة",
+      "pendingDesc": "فريقنا سيراجع طلبك ويتواصل معك قريباً.",
+      "approvedTitle": "تم قبول الطلب وتفعيل باقتك",
+      "approvedDesc": "الباقة دلوقتي مفعّلة على حسابك.",
+      "rejectedTitle": "تم رفض طلبك",
+      "quotedTitle": "تم تقديم عرض سعر لباقتك",
+      "reasonLabel": "السبب",
+      "submittedAt": "تاريخ الإرسال: {date}",
+      "customClients": "عملاء: {n}",
+      "customEmployees": "موظفون: {n}",
+      "customBranches": "فروع: {n}"
     }
+  },
+  "newRequest": {
+    "title": "طلب خدمة جديد",
+    "subtitle": "املأ التفاصيل وفريقنا هيتواصل معاك في أقرب وقت.",
+    "details": "تفاصيل الطلب",
+    "typeLabel": "نوع الطلب",
+    "noteLabel": "وصف المشكلة",
+    "notePlaceholder": "اشرح المشكلة بتفصيل (مثلاً: المكيّف مش بيبرّد، التركيب لدور تاني، إلخ)",
+    "voiceLabel": "ملاحظة صوتية (اختياري)",
+    "voiceHint": "تقدر تسجل صوت بدل ما تكتب — الحد الأقصى دقيقة واحدة.",
+    "submit": "إرسال الطلب",
+    "submitted": "تم إرسال طلبك بنجاح",
+    "stopRecordingFirst": "أوقف التسجيل قبل إرسال الطلب",
+    "audioUploadFailed": "تعذّر رفع الملف الصوتي: {reason}",
+    "descriptionRequired": "لازم تكتب وصف للمشكلة أو تسجّل ملاحظة صوتية.",
+    "descriptionOk": "تمام، الوصف جاهز.",
+    "type": {
+      "MAINTENANCE": "صيانة",
+      "INSPECTION": "كشف ومعاينة",
+      "REPAIR": "إصلاح عطل",
+      "SUPPLY": "توريد مستلزمات",
+      "INSTALL": "تركيب",
+      "SUPPLY_INSTALL": "توريد وتركيب"
+    }
+  },
+  "voiceRecorder": {
+    "start": "بدء التسجيل",
+    "stop": "إيقاف التسجيل",
+    "play": "تشغيل",
+    "pause": "إيقاف",
+    "discard": "حذف التسجيل",
+    "recording": "جاري التسجيل…",
+    "ready": "جاهز للإرسال",
+    "hint": "اضغط الميكروفون للبدء",
+    "attachedNote": "ملاحظة صوتية مرفقة",
+    "errorPermission": "لازم تسمح للموقع باستخدام الميكروفون",
+    "errorNoMic": "مفيش ميكروفون متاح",
+    "errorGeneric": "تعذّر تشغيل الميكروفون",
+    "errorInsecureContext": "التسجيل الصوتي يحتاج اتصال HTTPS — افتح التطبيق على https:// أو من localhost على نفس الجهاز."
   },
   "requests": {
     "assignTechnician": "تعيين فني",

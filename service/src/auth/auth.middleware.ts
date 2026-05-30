@@ -18,6 +18,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
       id: payload.sub,
       role: payload.role,
       companyId: payload.companyId,
+      branchId: payload.branchId ?? null,
     };
     next();
   } catch {

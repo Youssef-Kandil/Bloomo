@@ -7,10 +7,15 @@ export const activatePlanDto = z.object({
   plan: z.enum(['BASIC', 'PRO', 'ENTERPRISE']),
   billingCycle: billingCycleEnum,
   durationDays: z.coerce.number().int().min(1).max(3650).optional(),
+  // Optional override for the auto-recorded INCOME entry. When omitted, the
+  // amount defaults to Plan.monthlyPrice / yearlyPrice based on billingCycle.
+  amount: z.coerce.number().min(0).optional(),
 });
 
 export const extendSubscriptionDto = z.object({
   days: z.coerce.number().int().min(1).max(3650),
+  // Optional override; defaults to (Plan.monthlyPrice / 30) * days.
+  amount: z.coerce.number().min(0).optional(),
 });
 
 export const setLimitsDto = z.object({
@@ -54,9 +59,20 @@ export const offerCreateDto = z.object({
 
 export const offerUpdateDto = offerCreateDto.partial();
 
-export const subscriptionRequestUpdateDto = z.object({
-  status: z.enum(['PENDING', 'APPROVED', 'REJECTED']),
-});
+export const subscriptionRequestUpdateDto = z
+  .object({
+    status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'QUOTED']),
+    rejectReason: z.string().trim().max(2000).optional(),
+    ownerMessage: z.string().trim().max(2000).optional(),
+  })
+  .refine((v) => v.status !== 'REJECTED' || (v.rejectReason && v.rejectReason.length >= 3), {
+    message: 'rejectReason is required when status is REJECTED',
+    path: ['rejectReason'],
+  })
+  .refine((v) => v.status !== 'QUOTED' || (v.ownerMessage && v.ownerMessage.length >= 3), {
+    message: 'ownerMessage is required when status is QUOTED',
+    path: ['ownerMessage'],
+  });
 
 export type ActivatePlanInput = z.infer<typeof activatePlanDto>;
 export type ExtendSubscriptionInput = z.infer<typeof extendSubscriptionDto>;

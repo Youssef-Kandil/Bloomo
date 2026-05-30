@@ -39,6 +39,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (me.data?.role === 'OWNER') router.replace('/system/overview');
   }, [me.data?.role, router]);
 
+  // CLIENT accounts only have access to new-request + settings. If they hit
+  // any other dashboard route (e.g. /overview), bounce them to new-request.
+  useEffect(() => {
+    if (me.data?.role !== 'CLIENT') return;
+    const inAllowedClientArea =
+      pathname.includes('/dashboard/new-request') ||
+      pathname.includes('/dashboard/settings');
+    if (!inAllowedClientArea) router.replace('/dashboard/new-request');
+  }, [me.data?.role, pathname, router]);
+
   useEffect(() => {
     if (isAdmin && sub.data?.isExpired && !onPlansPage) {
       router.replace('/dashboard/plans');

@@ -9,15 +9,22 @@ export const requestTypeSchema = z.enum([
   'SUPPLY_INSTALL',
 ]);
 
+// `clientId` is optional at the DTO level because CLIENT-role accounts
+// derive the client server-side from `accountUserId`. Staff (ADMIN/MANAGER)
+// callers MUST supply it — that is enforced in the service layer.
+//
+// `voiceNoteUrl` must be a relative `/uploads/voice-notes/...` URL produced
+// by the dedicated upload endpoint — we validate the prefix to prevent
+// arbitrary URL injection.
 export const createRequestDto = z.object({
-  clientId: z.string().min(1),
+  clientId: z.string().min(1).optional(),
   type: requestTypeSchema,
   note: z.string().trim().max(2000).optional(),
-});
-
-export const clientSelfRequestDto = z.object({
-  type: requestTypeSchema,
-  note: z.string().trim().max(2000).optional(),
+  voiceNoteUrl: z
+    .string()
+    .regex(/^\/uploads\/voice-notes\/[A-Za-z0-9_-]+\.[a-z0-9]+$/u, 'Invalid voice note URL')
+    .optional(),
+  voiceDurationMs: z.coerce.number().int().min(100).max(70_000).optional(),
 });
 
 export const assignRequestDto = z.object({

@@ -83,7 +83,13 @@ export interface SubscriptionRequestRow {
   contactEmail: string;
   contactPhone: string | null;
   note: string | null;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'QUOTED';
+  rejectReason: string | null;
+  ownerMessage: string | null;
+  customClientsLimit: number | null;
+  customEmployeesLimit: number | null;
+  customBranchesLimit: number | null;
+  decidedAt: string | null;
   createdAt: string;
   company: { id: string; name: string } | null;
 }
@@ -134,6 +140,45 @@ export function useSystemCompany(id: string) {
     queryFn: async () => {
       const res = await api.get<{ company: CompanyRow }>(`/api/system/companies/${id}`);
       return res.data.company;
+    },
+  });
+}
+
+export interface PlanActivationPreview {
+  currentPlan: {
+    key: PlanKey;
+    name: string;
+    billingCycle: CycleKey | null;
+    limits: { clients: number; employees: number; branches: number };
+  };
+  requestedPlan: {
+    key: PlanKey;
+    name: string;
+    billingCycle: CycleKey;
+    limits: { clients: number; employees: number; branches: number };
+    price: number;
+    currency: string;
+  };
+  usage: { clients: number; employees: number; branches: number };
+  violations: Array<{ resource: 'clients' | 'employees' | 'branches'; used: number; limit: number }>;
+  canApprove: boolean;
+  hasCustomLimits: boolean;
+}
+
+export function useActivationPreview(
+  companyId: string | null,
+  plan: Exclude<PlanKey, 'TRIAL'> | null,
+  billingCycle: CycleKey | null,
+) {
+  return useQuery({
+    queryKey: ['system', 'companies', companyId, 'activation-preview', plan, billingCycle] as const,
+    enabled: !!companyId && !!plan && !!billingCycle,
+    queryFn: async () => {
+      const res = await api.get<{ preview: PlanActivationPreview }>(
+        `/api/system/companies/${companyId}/activation-preview`,
+        { params: { plan, billingCycle } },
+      );
+      return res.data.preview;
     },
   });
 }
@@ -317,13 +362,25 @@ export function useSystemRequests() {
   });
 }
 
+export interface UpdateRequestInput {
+  id: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'QUOTED';
+  rejectReason?: string;
+  ownerMessage?: string;
+}
+
 export function useUpdateRequestStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { id: string; status: 'PENDING' | 'APPROVED' | 'REJECTED' }) => {
-      const res = await api.patch(`/api/system/requests/${input.id}`, { status: input.status });
+    mutationFn: async (input: UpdateRequestInput) => {
+      const { id, ...body } = input;
+      const res = await api.patch(`/api/system/requests/${id}`, body);
       return res.data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: systemKeys.requests }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: systemKeys.requests });
+      qc.invalidateQueries({ queryKey: ['subscription', 'current'] });
+      qc.invalidateQueries({ queryKey: ['system', 'companies'] });
+    },
   });
 }

@@ -17,16 +17,33 @@ function companyId(req: Request): string {
   return id;
 }
 
+/** Restrict listings/writes to a manager's own branch; admin/owner see all. */
+function managerBranchScope(req: Request): string | null {
+  if (req.user?.role === 'MANAGER') return req.user.branchId ?? null;
+  return null;
+}
+
 export const usersController = {
   async employees(req: Request, res: Response): Promise<void> {
-    res.json(await usersService.listEmployees(companyId(req), Number(req.query.page ?? 1)));
+    res.json(
+      await usersService.listEmployees(
+        companyId(req),
+        Number(req.query.page ?? 1),
+        undefined,
+        managerBranchScope(req),
+      ),
+    );
   },
   async managers(req: Request, res: Response): Promise<void> {
     res.json(await usersService.listManagers(companyId(req)));
   },
   async createEmployee(req: Request, res: Response): Promise<void> {
     res.status(201).json({
-      user: await usersService.createEmployee(companyId(req), req.body as CreateEmployeeInput),
+      user: await usersService.createEmployee(
+        companyId(req),
+        req.body as CreateEmployeeInput,
+        managerBranchScope(req),
+      ),
     });
   },
   async createManager(req: Request, res: Response): Promise<void> {

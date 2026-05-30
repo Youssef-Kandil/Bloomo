@@ -24,6 +24,11 @@ function companyId(req: Request): string {
   return id;
 }
 
+function managerBranchScope(req: Request): string | null {
+  if (req.user?.role === 'MANAGER') return req.user.branchId ?? null;
+  return null;
+}
+
 export const tasksController = {
   async mine(req: Request, res: Response): Promise<void> {
     const tasks = await tasksService.myOpen(employeeId(req));
@@ -54,7 +59,11 @@ export const tasksController = {
   },
 
   async list(req: Request, res: Response): Promise<void> {
-    const data = await tasksService.listTasks(companyId(req), req.query as unknown as TaskQuery);
+    const data = await tasksService.listTasks(
+      companyId(req),
+      req.query as unknown as TaskQuery,
+      managerBranchScope(req),
+    );
     res.json(data);
   },
 
@@ -65,6 +74,7 @@ export const tasksController = {
       companyId(req),
       user.id,
       req.body as CreateTaskInput,
+      managerBranchScope(req),
     );
     res.status(201).json({ task });
   },
@@ -75,12 +85,13 @@ export const tasksController = {
       param(req, 'id'),
       req.body as UpdateTaskInput,
       req.user?.id,
+      managerBranchScope(req),
     );
     res.json({ task });
   },
 
   async remove(req: Request, res: Response): Promise<void> {
-    await tasksService.deleteTask(companyId(req), param(req, 'id'));
+    await tasksService.deleteTask(companyId(req), param(req, 'id'), managerBranchScope(req));
     res.status(204).end();
   },
 

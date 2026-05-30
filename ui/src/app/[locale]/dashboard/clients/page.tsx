@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 
 import { LocationPicker } from '@/components/map/LocationPicker';
 import { DetailDrawer, DetailRow } from '@/components/shared/DetailDrawer';
+import { LimitReachedNotice } from '@/components/shared/LimitReachedNotice';
 import { Pagination } from '@/components/shared/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +45,7 @@ import {
   type ClientInput,
   type ClientPhone,
 } from '@/hooks/queries/clients';
+import { useCurrentSubscription } from '@/hooks/queries/subscription';
 import { useMarkSupplyPaid, useSupplyOperations } from '@/hooks/queries/supply';
 import { useReverseGeocode } from '@/hooks/useReverseGeocode';
 import { cn } from '@/lib/utils';
@@ -66,6 +68,8 @@ export default function ClientsPage() {
   const deleteMut = useDeleteClient();
 
   const [drawer, setDrawer] = useState<DrawerState>(null);
+  const sub = useCurrentSubscription();
+  const atLimit = sub.data?.atLimit?.clients ?? false;
 
   const items = list.data?.items ?? [];
   const clientsPg = usePagination(items);
@@ -90,10 +94,18 @@ export default function ClientsPage() {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('clients.title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">{list.data?.total ?? 0}</p>
         </div>
-        <Button variant="gradient" onClick={() => setDrawer({ mode: 'create' })}>
-          <Plus className="size-4" />
-          {t('common.create')}
-        </Button>
+        {atLimit && sub.data ? (
+          <LimitReachedNotice
+            resource="clients"
+            used={sub.data.usage?.clients ?? 0}
+            limit={sub.data.limits?.clients ?? 0}
+          />
+        ) : (
+          <Button variant="gradient" onClick={() => setDrawer({ mode: 'create' })}>
+            <Plus className="size-4" />
+            {t('common.create')}
+          </Button>
+        )}
       </motion.header>
 
       <motion.div variants={item}>

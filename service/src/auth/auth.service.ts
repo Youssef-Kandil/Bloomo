@@ -61,6 +61,7 @@ async function issueTokens(user: User): Promise<AuthResult> {
     sub: user.id,
     role: user.role,
     companyId: user.companyId,
+    branchId: user.branchId,
   });
   return { accessToken, refreshToken, user: toPublic(user) };
 }
@@ -106,6 +107,10 @@ export const authService = {
     await authModel.revokeRefreshToken(stored.id);
     const user = await authModel.findUserById(payload.sub);
     if (!user || !user.active) throw AppError.unauthorized('User disabled');
+    if (user.bannedAt) {
+      await authModel.revokeAllUserTokens(user.id);
+      throw AppError.forbidden('Account is banned');
+    }
     return issueTokens(user);
   },
 

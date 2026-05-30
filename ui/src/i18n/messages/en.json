@@ -10,6 +10,8 @@
     "resetPassword": "Reset password",
     "email": "Email",
     "password": "Password",
+    "confirmPassword": "Confirm password",
+    "passwordsDontMatch": "Passwords don't match",
     "name": "Name",
     "companyName": "Company name",
     "submit": "Continue",
@@ -61,7 +63,20 @@
     "show": "Show",
     "hide": "Hide",
     "required": "Required",
-    "optional": "Optional"
+    "optional": "Optional",
+    "deleted": "Deleted"
+  },
+  "limit": {
+    "title": "You've reached your {resource} limit",
+    "description": "Your current plan allows {limit} {resource} and you've used {used}. Upgrade your plan or request a custom one.",
+    "descriptionManager": "The company has reached its {resource} limit ({used}/{limit}). Ask the admin to upgrade the plan.",
+    "compactMessage": "Limit reached ({used}/{limit} {resource}).",
+    "upgrade": "Upgrade",
+    "resource": {
+      "clients": "clients",
+      "employees": "employees",
+      "branches": "branches"
+    }
   },
   "attendance": {
     "checkIn": "Check in",
@@ -537,7 +552,8 @@
       "users": "Users",
       "plans": "Plans",
       "offers": "Offers",
-      "requests": "Sales requests"
+      "requests": "Sales requests",
+      "treasury": "Treasury"
     },
     "common": {
       "manage": "Manage",
@@ -691,14 +707,102 @@
       "subtitle": "All plan-activation requests from customers",
       "approve": "Approve",
       "reject": "Reject",
-      "approved": "Request approved",
+      "approved": "Request approved and plan activated",
       "rejected": "Request rejected",
+      "quoted": "Quote sent to the customer",
+      "sendQuote": "Send quote",
+      "cancel": "Cancel",
+      "confirmReject": "Confirm reject",
+      "rejectReasonLabel": "Rejection reason",
+      "rejectReasonPlaceholder": "Explain why this request is rejected (the admin will see this in their plans page)",
+      "rejectReasonHint": "A clear reason helps the admin understand and adjust their request.",
+      "rejectReasonRequired": "Rejection reason is required (3 chars minimum)",
+      "ownerMessageLabel": "Quote text / payment instructions",
+      "ownerMessagePlaceholder": "e.g. Price for your plan is X, please transfer to account XXX and send a screenshot of the transfer.",
+      "ownerMessageHint": "This text appears to the admin in a banner above their plans.",
+      "ownerMessageRequired": "Quote text is required (3 chars minimum)",
+      "requestedCustomLimits": "Requested custom limits",
+      "customLimitsApplyNote": "These limits will be applied to the company's subscription on approval.",
       "empty": "No requests",
       "error": "Could not update",
+      "details": "Request details",
+      "drawerTitle": "{company} — request details",
+      "drawerDesc": "Review the current and requested plans before approving.",
+      "contact": "Contact info",
+      "planComparison": "Plan comparison",
+      "currentPlan": "Current plan",
+      "currentUsage": "Usage",
+      "requestedPlan": "Requested plan",
+      "month": "month",
+      "year": "year",
+      "cannotApprove": "Cannot approve — current usage exceeds the requested plan's limits",
+      "alreadyDecided": "This request was already decided ({status})",
+      "downgradeBlockedTitle": "Cannot activate this plan right now",
+      "downgradeBlockedDesc": "The company's current usage exceeds the limits of the {plan} plan. They must reduce usage first.",
+      "downgradeFixHint": "Options: 1) ask the company to delete excess items, 2) set custom limits from the company screen, 3) suggest a higher plan.",
+      "customLimitsNote": "Note: this subscription has custom limits — they were applied instead of the plan's defaults.",
+      "over": "exceeds",
+      "resource": {
+        "clients": "Clients",
+        "employees": "Employees",
+        "branches": "Branches"
+      },
+      "col": {
+        "contactName": "Contact name",
+        "contactEmail": "Email",
+        "contactPhone": "Phone",
+        "note": "Notes",
+        "submittedAt": "Submitted at"
+      },
       "status": {
         "PENDING": "Pending",
         "APPROVED": "Approved",
-        "REJECTED": "Rejected"
+        "REJECTED": "Rejected",
+        "QUOTED": "Quoted"
+      }
+    },
+    "treasury": {
+      "title": "App treasury",
+      "subtitle": "Application-level income and expenses — with best-selling plans and revenue per plan.",
+      "addEntry": "Add entry",
+      "addEntryDesc": "Add a manual expense or income. Subscription income is recorded automatically when activating or extending a plan.",
+      "addSuccess": "Entry added",
+      "confirmDelete": "Delete this treasury entry?",
+      "totalIncome": "Total income",
+      "totalExpense": "Total expense",
+      "net": "Net",
+      "bestSellersByCount": "Best sellers (by activations)",
+      "bestSellersByRevenue": "Top revenue per plan",
+      "expenseBreakdown": "Expense breakdown",
+      "entries": "All entries",
+      "empty": "No entries in the selected range",
+      "allPlans": "All plans",
+      "allKinds": "All kinds",
+      "allCategories": "All categories",
+      "kind": {
+        "INCOME": "Income",
+        "EXPENSE": "Expense"
+      },
+      "category": {
+        "INFRASTRUCTURE": "Infrastructure",
+        "SALARIES": "Salaries",
+        "MARKETING": "Marketing",
+        "TOOLS": "Tools & services",
+        "TAXES": "Taxes",
+        "REFUND": "Refund",
+        "OTHER": "Other"
+      },
+      "col": {
+        "date": "Date",
+        "kind": "Kind",
+        "amount": "Amount",
+        "reason": "Description",
+        "tag": "Tags",
+        "category": "Category",
+        "plan": "Plan"
+      },
+      "unit": {
+        "activations": "activations"
       }
     }
   },
@@ -776,8 +880,61 @@
       "formTitle": "Custom plan request",
       "formSubtitle": "Tell us your needs and our sales team will reach out with a tailored offer.",
       "clientsField": "Expected number of clients",
-      "employeesField": "Expected number of employees"
+      "employeesField": "Expected number of employees",
+      "branchesField": "Expected number of branches"
+    },
+    "requestBanner": {
+      "pendingTitle": "Your request is under review",
+      "pendingDesc": "Our team will review your request and get back to you shortly.",
+      "approvedTitle": "Request approved — your plan is active",
+      "approvedDesc": "Your subscription is now active on the new plan.",
+      "rejectedTitle": "Your request was rejected",
+      "quotedTitle": "We've sent you a price quote",
+      "reasonLabel": "Reason",
+      "submittedAt": "Submitted: {date}",
+      "customClients": "Clients: {n}",
+      "customEmployees": "Employees: {n}",
+      "customBranches": "Branches: {n}"
     }
+  },
+  "newRequest": {
+    "title": "New service request",
+    "subtitle": "Fill in the details and our team will get back to you shortly.",
+    "details": "Request details",
+    "typeLabel": "Request type",
+    "noteLabel": "Describe the issue",
+    "notePlaceholder": "Describe the issue in detail (e.g. AC not cooling, install on second floor, etc.)",
+    "voiceLabel": "Voice note (optional)",
+    "voiceHint": "You can record a voice note instead of typing — maximum 1 minute.",
+    "submit": "Submit request",
+    "submitted": "Your request was submitted",
+    "stopRecordingFirst": "Stop the recording before submitting",
+    "audioUploadFailed": "Could not upload the voice note: {reason}",
+    "descriptionRequired": "Please write a description or record a voice note.",
+    "descriptionOk": "Description ready.",
+    "type": {
+      "MAINTENANCE": "Maintenance",
+      "INSPECTION": "Inspection",
+      "REPAIR": "Repair",
+      "SUPPLY": "Supply",
+      "INSTALL": "Installation",
+      "SUPPLY_INSTALL": "Supply & install"
+    }
+  },
+  "voiceRecorder": {
+    "start": "Start recording",
+    "stop": "Stop recording",
+    "play": "Play",
+    "pause": "Pause",
+    "discard": "Discard recording",
+    "recording": "Recording…",
+    "ready": "Ready to send",
+    "hint": "Tap the mic to start",
+    "attachedNote": "Voice note attached",
+    "errorPermission": "Please allow microphone access",
+    "errorNoMic": "No microphone available",
+    "errorGeneric": "Could not start the microphone",
+    "errorInsecureContext": "Voice recording requires HTTPS — open the app over https:// or use localhost on the same device."
   },
   "requests": {
     "assignTechnician": "Assign technician",

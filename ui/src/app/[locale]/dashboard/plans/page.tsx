@@ -8,13 +8,16 @@ import { NotAuthorized } from '@/components/shared/NotAuthorized';
 import { useScreenGuard } from '@/hooks/useScreenGuard';
 import {
   AlertCircle,
+  AlertTriangle,
   Briefcase,
   Building2,
   Check,
   CheckCircle2,
   Clock,
+  Hourglass,
   Loader2,
   Mail,
+  MessageSquare,
   Phone,
   RefreshCw,
   Rocket,
@@ -34,6 +37,7 @@ import {
   useCurrentSubscription,
   usePlans,
   type BillingCycle,
+  type LatestRequestSummary,
   type PlanCatalogEntry,
   type SubscriptionPlan,
 } from '@/hooks/queries/subscription';
@@ -69,6 +73,7 @@ export default function PlansPage() {
     contactPhone: '',
     clients: '',
     employees: '',
+    branches: '',
     note: '',
   });
   const [form, setForm] = useState({
@@ -141,18 +146,17 @@ export default function PlansPage() {
       contactPhone: '',
       clients: '',
       employees: '',
+      branches: '',
       note: '',
     });
     setCustomOpen(true);
   }
 
   async function submitCustom(): Promise<void> {
-    const composedNote = [
-      `[CUSTOM] clients: ${customForm.clients || '—'}, employees: ${customForm.employees || '—'}`,
-      customForm.note,
-    ]
-      .filter(Boolean)
-      .join('\n');
+    const toNum = (s: string): number | undefined => {
+      const n = Number(s);
+      return Number.isFinite(n) && n > 0 ? n : undefined;
+    };
     try {
       await contactMut.mutateAsync({
         plan: 'ENTERPRISE',
@@ -160,7 +164,10 @@ export default function PlansPage() {
         contactName: customForm.contactName,
         contactEmail: customForm.contactEmail,
         contactPhone: customForm.contactPhone || undefined,
-        note: composedNote,
+        note: customForm.note || undefined,
+        customClientsLimit: toNum(customForm.clients),
+        customEmployeesLimit: toNum(customForm.employees),
+        customBranchesLimit: toNum(customForm.branches),
       });
       toast.success(t('contactSuccess'));
       setCustomOpen(false);
@@ -185,6 +192,10 @@ export default function PlansPage() {
           planEntry={currentPlanEntry}
           onRenew={openRenew}
         />
+      )}
+
+      {sub.data?.latestRequest && (
+        <LatestRequestBanner request={sub.data.latestRequest} />
       )}
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -665,6 +676,7 @@ function CustomPlanPanel({
     contactPhone: string;
     clients: string;
     employees: string;
+    branches: string;
     note: string;
   };
   onChange: (patch: Partial<typeof form>) => void;
@@ -678,7 +690,8 @@ function CustomPlanPanel({
     form.contactName.trim().length > 0 &&
     /\S+@\S+\.\S+/.test(form.contactEmail) &&
     form.clients.trim().length > 0 &&
-    form.employees.trim().length > 0;
+    form.employees.trim().length > 0 &&
+    form.branches.trim().length > 0;
 
   return (
     <motion.div
@@ -706,7 +719,7 @@ function CustomPlanPanel({
           }}
           className="p-6 space-y-4 overflow-y-auto"
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <Label htmlFor="customClients">{t('clientsField')}</Label>
               <Input
@@ -729,6 +742,18 @@ function CustomPlanPanel({
                 onChange={(e) => onChange({ employees: e.target.value })}
                 required
                 placeholder="50"
+              />
+            </div>
+            <div>
+              <Label htmlFor="customBranches">{t('branchesField')}</Label>
+              <Input
+                id="customBranches"
+                type="number"
+                min={1}
+                value={form.branches}
+                onChange={(e) => onChange({ branches: e.target.value })}
+                required
+                placeholder="5"
               />
             </div>
           </div>
@@ -790,5 +815,108 @@ function CustomPlanPanel({
         </form>
       </motion.div>
     </motion.div>
+  );
+}
+
+/**
+ * Shown right under SubscriptionBanner with the admin's most recent request:
+ *   PENDING  → "your request is awaiting review"
+ *   APPROVED → "request approved — plan now active"
+ *   REJECTED → "request rejected: <reason>"
+ *   QUOTED   → owner's price quote / payment instructions
+ *
+ * Auto-hidden by the consumer when `latestRequest` is null.
+ */
+function LatestRequestBanner({ request }: { request: LatestRequestSummary }): React.ReactElement {
+  const t = useTranslations('plans.requestBanner');
+  type Variant = 'pending' | 'approved' | 'rejected' | 'quoted';
+  const variant: Variant =
+    request.status === 'APPROVED'
+      ? 'approved'
+      : request.status === 'REJECTED'
+        ? 'rejected'
+        : request.status === 'QUOTED'
+          ? 'quoted'
+          : 'pending';
+  const style: Record<Variant, { wrap: string; icon: React.ReactNode; title: string }> = {
+    pending: {
+      wrap: 'border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-300',
+      icon: <Hourglass className="size-5" />,
+      title: t('pendingTitle'),
+    },
+    approved: {
+      wrap: 'border-emerald-500/40 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300',
+      icon: <CheckCircle2 className="size-5" />,
+      title: t('approvedTitle'),
+    },
+    rejected: {
+      wrap: 'border-destructive/40 bg-destructive/5 text-destructive',
+      icon: <AlertTriangle className="size-5" />,
+      title: t('rejectedTitle'),
+    },
+    quoted: {
+      wrap: 'border-sky-500/40 bg-sky-500/5 text-sky-700 dark:text-sky-300',
+      icon: <MessageSquare className="size-5" />,
+      title: t('quotedTitle'),
+    },
+  };
+  const s = style[variant];
+  const hasCustom =
+    request.customClientsLimit !== null ||
+    request.customEmployeesLimit !== null ||
+    request.customBranchesLimit !== null;
+
+  return (
+    <div className={cn('rounded-2xl border p-4 sm:p-5 flex flex-col sm:flex-row gap-3', s.wrap)}>
+      <div className="shrink-0">{s.icon}</div>
+      <div className="flex-1 space-y-1.5 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-semibold text-sm">{s.title}</p>
+          <span className="px-2 py-0.5 rounded-full text-xs bg-background/60 text-foreground">
+            {request.plan} · {request.billingCycle}
+          </span>
+        </div>
+
+        {variant === 'rejected' && request.rejectReason && (
+          <p className="text-sm text-foreground/90 whitespace-pre-wrap">
+            <span className="text-muted-foreground">{t('reasonLabel')}: </span>
+            {request.rejectReason}
+          </p>
+        )}
+        {variant === 'quoted' && request.ownerMessage && (
+          <p className="text-sm text-foreground/90 whitespace-pre-wrap">{request.ownerMessage}</p>
+        )}
+        {variant === 'pending' && (
+          <p className="text-xs text-muted-foreground">{t('pendingDesc')}</p>
+        )}
+        {variant === 'approved' && (
+          <p className="text-xs text-muted-foreground">{t('approvedDesc')}</p>
+        )}
+
+        {hasCustom && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {request.customClientsLimit !== null && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-background/60 text-foreground">
+                {t('customClients', { n: request.customClientsLimit })}
+              </span>
+            )}
+            {request.customEmployeesLimit !== null && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-background/60 text-foreground">
+                {t('customEmployees', { n: request.customEmployeesLimit })}
+              </span>
+            )}
+            {request.customBranchesLimit !== null && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-background/60 text-foreground">
+                {t('customBranches', { n: request.customBranchesLimit })}
+              </span>
+            )}
+          </div>
+        )}
+
+        <p className="text-[11px] text-muted-foreground">
+          {t('submittedAt', { date: new Date(request.createdAt).toLocaleString() })}
+        </p>
+      </div>
+    </div>
   );
 }

@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { UserPlus } from 'lucide-react';
 
 import { AssignTechnicianDrawer } from '@/components/shared/AssignTechnicianDrawer';
+import { VoiceNotePlayer } from '@/components/shared/VoiceRecorder';
 import { Button } from '@/components/ui/button';
 import { useRequest } from '@/hooks/queries/requests';
 
@@ -30,6 +31,14 @@ export default function RequestDetailPage() {
             {req.data.type} · {req.data.status}
           </p>
           {req.data.note && <p className="text-sm mt-2">{req.data.note}</p>}
+          {req.data.voiceNoteUrl && (
+            <div className="mt-3">
+              <VoiceNotePlayer
+                url={req.data.voiceNoteUrl}
+                durationMs={req.data.voiceDurationMs}
+              />
+            </div>
+          )}
         </div>
         {canAssign && (
           <Button type="button" variant="gradient" onClick={() => setAssignOpen(true)}>

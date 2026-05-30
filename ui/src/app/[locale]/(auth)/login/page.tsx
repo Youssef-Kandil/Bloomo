@@ -8,6 +8,7 @@ import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { useLogin } from '@/hooks/queries/auth';
 import { Link, useRouter } from '@/i18n/routing';
 
@@ -22,7 +23,15 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       const user = await login.mutateAsync({ email, password });
-      router.push(user.role === 'OWNER' ? '/system/overview' : '/dashboard/overview');
+      // OWNER → system control panel; CLIENT → straight to the request form;
+      // everyone else (ADMIN/MANAGER/EMPLOYEE) → the dashboard overview.
+      const dest =
+        user.role === 'OWNER'
+          ? '/system/overview'
+          : user.role === 'CLIENT'
+            ? '/dashboard/new-request'
+            : '/dashboard/overview';
+      router.push(dest);
     } catch {
       /* error surfaced via login.error */
     }
@@ -59,18 +68,17 @@ export default function LoginPage() {
 
       <div className="space-y-2">
         <Label htmlFor="password">{t('auth.password')}</Label>
-        <div className="relative">
-          <Lock className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="ps-10"
-          />
-        </div>
+        <PasswordInput
+          id="password"
+          name="password"
+          leftIcon={Lock}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          autoComplete="current-password"
+          showRules={false}
+          showStrength={false}
+        />
       </div>
 
       {login.isError && (

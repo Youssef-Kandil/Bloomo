@@ -82,7 +82,7 @@ export const tasksService = {
 
   /* Standalone tasks */
 
-  async listTasks(companyId: string, query: TaskQuery) {
+  async listTasks(companyId: string, query: TaskQuery, branchScope?: string | null) {
     const where: Prisma.TaskWhereInput = {
       companyId,
       ...(query.status ? { status: query.status } : {}),
@@ -95,16 +95,28 @@ export const tasksService = {
             ],
           }
         : {}),
+      // Branch-scoped listing: a manager sees only tasks whose assignee
+      // belongs to their branch (via Employee.branchId).
+      ...(branchScope ? { assignee: { employee: { branchId: branchScope } } } : {}),
     };
     const items = await tasksModel.listTasks(where);
     return { items, total: items.length };
   },
 
-  async createTask(companyId: string, createdById: string, input: CreateTaskInput) {
+  async createTask(
+    companyId: string,
+    createdById: string,
+    input: CreateTaskInput,
+    branchScope?: string | null,
+  ) {
     const assignee = await prisma.user.findFirst({
       where: { id: input.assigneeId, companyId },
+      include: { employee: true },
     });
     if (!assignee) throw AppError.notFound('Assignee not found in this company');
+    if (branchScope && assignee.employee?.branchId !== branchScope) {
+      throw AppError.forbidden("Manager can only assign tasks to their own branch's employees");
+    }
 
     if (input.clientId) {
       const client = await prisma.client.findFirst({
@@ -134,14 +146,29 @@ export const tasksService = {
     id: string,
     input: UpdateTaskInput,
     actorId?: string,
+    branchScope?: string | null,
   ) {
     const existing = await tasksModel.findTask(id, companyId);
     if (!existing) throw AppError.notFound('Task not found');
+    if (branchScope) {
+      // Manager may only edit tasks whose current assignee is in their branch.
+      const currentAssignee = await prisma.user.findUnique({
+        where: { id: existing.assigneeId },
+        include: { employee: true },
+      });
+      if (currentAssignee?.employee?.branchId !== branchScope) {
+        throw AppError.forbidden("Manager can only edit tasks for their own branch's employees");
+      }
+    }
     if (input.assigneeId && input.assigneeId !== existing.assigneeId) {
       const assignee = await prisma.user.findFirst({
         where: { id: input.assigneeId, companyId },
+        include: { employee: true },
       });
       if (!assignee) throw AppError.notFound('Assignee not found in this company');
+      if (branchScope && assignee.employee?.branchId !== branchScope) {
+        throw AppError.forbidden("Manager can only reassign within their own branch");
+      }
     }
     if (input.clientId) {
       const client = await prisma.client.findFirst({
@@ -307,9 +334,18 @@ export const tasksService = {
     return tasksModel.updateTask(taskId, { status: 'IN_PROGRESS', actualEnd: null });
   },
 
-  async deleteTask(companyId: string, id: string) {
+  async deleteTask(companyId: string, id: string, branchScope?: string | null) {
     const existing = await tasksModel.findTask(id, companyId);
     if (!existing) throw AppError.notFound('Task not found');
+    if (branchScope) {
+      const currentAssignee = await prisma.user.findUnique({
+        where: { id: existing.assigneeId },
+        include: { employee: true },
+      });
+      if (currentAssignee?.employee?.branchId !== branchScope) {
+        throw AppError.forbidden("Manager can only delete tasks for their own branch's employees");
+      }
+    }
     await tasksModel.deleteTask(id);
   },
 };

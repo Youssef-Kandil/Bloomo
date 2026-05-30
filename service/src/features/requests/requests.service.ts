@@ -1,18 +1,35 @@
 import { prisma } from '@/config/prisma';
 import { AppError } from '@/lib/http-error';
+import { deleteUploadByUrl } from '@/lib/uploads';
 import { whatsappQueue } from '@/features/whatsapp/whatsapp.queue';
 
 import { requestsModel } from './requests.model';
 import type { AssignRequestInput, CreateRequestInput, ListRequestsQuery } from './requests.dto';
 
+/** A request belongs to a manager's branch iff at least one assignment is on that branch.
+ *  Unassigned PENDING requests are open to any branch — a manager may still cancel/delete
+ *  them, matching the listing rule. */
+async function ensureRequestInBranch(
+  request: { id: string; status: string },
+  branchId: string,
+): Promise<void> {
+  if (request.status === 'PENDING') return;
+  const hit = await prisma.assignment.findFirst({
+    where: { requestId: request.id, employee: { branchId } },
+    select: { id: true },
+  });
+  if (!hit) throw AppError.forbidden("Manager can only act on their own branch's requests");
+}
+
 export const requestsService = {
-  async list(companyId: string, q: ListRequestsQuery) {
+  async list(companyId: string, q: ListRequestsQuery, branchScope?: string | null) {
     const skip = (q.page - 1) * q.pageSize;
     const [items, total] = await requestsModel.list(
       companyId,
       { ...(q.status ? { status: q.status } : {}), ...(q.clientId ? { clientId: q.clientId } : {}) },
       skip,
       q.pageSize,
+      branchScope,
     );
     return {
       items,
@@ -30,6 +47,7 @@ export const requestsService = {
   },
 
   async createByStaff(companyId: string, input: CreateRequestInput) {
+    if (!input.clientId) throw AppError.badRequest('clientId is required');
     const client = await prisma.client.findFirst({
       where: { id: input.clientId, companyId },
     });
@@ -40,6 +58,8 @@ export const requestsService = {
       client: { connect: { id: client.id } },
       type: input.type,
       note: input.note ?? null,
+      voiceNoteUrl: input.voiceNoteUrl ?? null,
+      voiceDurationMs: input.voiceDurationMs ?? null,
       status: 'PENDING',
     });
     await requestsModel.appendHistory(request.id, 'CREATED', { by: 'staff' });
@@ -51,11 +71,24 @@ export const requestsService = {
     const client = await prisma.client.findUnique({ where: { accountUserId: clientUserId } });
     if (!client) throw AppError.forbidden('Client profile not found for this account');
 
+    // Require *some* description (written note OR voice note) — otherwise
+    // staff have no context to act on the request. Frontend enforces this
+    // too; this is the defense-in-depth check for direct API callers.
+    const hasNote = (input.note ?? '').trim().length > 0;
+    const hasVoice = (input.voiceNoteUrl ?? '').length > 0;
+    if (!hasNote && !hasVoice) {
+      throw AppError.badRequest(
+        'Either a written note or a voice recording is required',
+      );
+    }
+
     const request = await requestsModel.create({
       company: { connect: { id: client.companyId } },
       client: { connect: { id: client.id } },
       type: input.type,
       note: input.note ?? null,
+      voiceNoteUrl: input.voiceNoteUrl ?? null,
+      voiceDurationMs: input.voiceDurationMs ?? null,
       status: 'PENDING',
     });
     await requestsModel.appendHistory(request.id, 'CREATED', { by: 'client' });
@@ -68,6 +101,7 @@ export const requestsService = {
     requestId: string,
     assignedByUserId: string,
     input: AssignRequestInput,
+    branchScope?: string | null,
   ) {
     const request = await requestsModel.findById(companyId, requestId);
     if (!request) throw AppError.notFound('Request not found');
@@ -82,6 +116,14 @@ export const requestsService = {
     const validEmployees = employees.filter((e) => e.user.companyId === companyId);
     if (validEmployees.length !== input.employeeIds.length) {
       throw AppError.notFound('One or more employees not found');
+    }
+    if (branchScope) {
+      const wrongBranch = validEmployees.filter((e) => e.branchId !== branchScope);
+      if (wrongBranch.length > 0) {
+        throw AppError.forbidden(
+          `Manager can only assign their own branch's employees (offending: ${wrongBranch.map((e) => e.user.name).join(', ')})`,
+        );
+      }
     }
 
     // Guard: only employees who are checked-in today AND haven't checked-out
@@ -157,17 +199,22 @@ export const requestsService = {
     return assignments;
   },
 
-  async cancel(companyId: string, requestId: string) {
+  async cancel(companyId: string, requestId: string, branchScope?: string | null) {
     const request = await requestsModel.findById(companyId, requestId);
     if (!request) throw AppError.notFound('Request not found');
     if (request.status === 'COMPLETED') throw AppError.conflict('Already completed');
+    if (branchScope) await ensureRequestInBranch(request, branchScope);
     await requestsModel.update(requestId, { status: 'CANCELLED' });
     await requestsModel.appendHistory(requestId, 'CANCELLED');
   },
 
-  async remove(companyId: string, requestId: string) {
+  async remove(companyId: string, requestId: string, branchScope?: string | null) {
     const request = await requestsModel.findById(companyId, requestId);
     if (!request) throw AppError.notFound('Request not found');
+    if (branchScope) await ensureRequestInBranch(request, branchScope);
     await requestsModel.remove(requestId);
+    // Fire-and-forget cleanup of the on-disk voice note. Done AFTER the row
+    // is deleted so a DB failure doesn't orphan the file the other way.
+    deleteUploadByUrl(request.voiceNoteUrl);
   },
 };

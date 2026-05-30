@@ -4,6 +4,12 @@ import { requireRole } from '@/auth/auth.middleware';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { validate } from '@/utils/validate';
 
+import { appTreasuryController } from './app-treasury.controller';
+import {
+  createAppTreasuryEntryDto,
+  listAppTreasuryDto,
+  summaryAppTreasuryDto,
+} from './app-treasury.dto';
 import { systemController } from './system.controller';
 import {
   activatePlanDto,
@@ -25,6 +31,10 @@ systemRouter.get('/overview', asyncHandler(systemController.overview));
 
 systemRouter.get('/companies', asyncHandler(systemController.listCompanies));
 systemRouter.get('/companies/:id', asyncHandler(systemController.getCompany));
+systemRouter.get(
+  '/companies/:id/activation-preview',
+  asyncHandler(systemController.previewActivation),
+);
 systemRouter.post(
   '/companies/:id/activate-plan',
   validate(activatePlanDto),
@@ -80,3 +90,20 @@ systemRouter.patch(
   validate(subscriptionRequestUpdateDto),
   asyncHandler(systemController.updateRequest),
 );
+
+systemRouter.get(
+  '/treasury/summary',
+  validate(summaryAppTreasuryDto, 'query'),
+  asyncHandler(appTreasuryController.summary),
+);
+systemRouter.get(
+  '/treasury',
+  validate(listAppTreasuryDto, 'query'),
+  asyncHandler(appTreasuryController.list),
+);
+systemRouter.post(
+  '/treasury',
+  validate(createAppTreasuryEntryDto),
+  asyncHandler(appTreasuryController.create),
+);
+systemRouter.delete('/treasury/:id', asyncHandler(appTreasuryController.remove));

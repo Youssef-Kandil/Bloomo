@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 
 import { AppError } from '@/lib/http-error';
+import { publicUrlForUpload } from '@/lib/uploads';
 import { param } from '@/utils/reqParams';
 
 import { requestsService } from './requests.service';
@@ -12,9 +13,20 @@ function companyId(req: Request): string {
   return id;
 }
 
+function managerBranchScope(req: Request): string | null {
+  if (req.user?.role === 'MANAGER') return req.user.branchId ?? null;
+  return null;
+}
+
 export const requestsController = {
   async list(req: Request, res: Response): Promise<void> {
-    res.json(await requestsService.list(companyId(req), req.query as unknown as ListRequestsQuery));
+    res.json(
+      await requestsService.list(
+        companyId(req),
+        req.query as unknown as ListRequestsQuery,
+        managerBranchScope(req),
+      ),
+    );
   },
 
   async get(req: Request, res: Response): Promise<void> {
@@ -39,17 +51,31 @@ export const requestsController = {
       param(req, 'id'),
       req.user!.id,
       req.body as AssignRequestInput,
+      managerBranchScope(req),
     );
     res.status(201).json({ assignments });
   },
 
   async cancel(req: Request, res: Response): Promise<void> {
-    await requestsService.cancel(companyId(req), param(req, 'id'));
+    await requestsService.cancel(companyId(req), param(req, 'id'), managerBranchScope(req));
     res.status(204).end();
   },
 
   async remove(req: Request, res: Response): Promise<void> {
-    await requestsService.remove(companyId(req), param(req, 'id'));
+    await requestsService.remove(companyId(req), param(req, 'id'), managerBranchScope(req));
     res.status(204).end();
+  },
+
+  async uploadVoiceNote(req: Request, res: Response): Promise<void> {
+    // multer attaches the file to req.file when the multipart field name
+    // matches its `single('audio')` config. Bail out clearly if missing
+    // so the client gets a 400 instead of a confusing crash.
+    const file = (req as Request & { file?: Express.Multer.File }).file;
+    if (!file) throw AppError.badRequest('audio field is required');
+    res.status(201).json({
+      url: publicUrlForUpload(file.path),
+      size: file.size,
+      mimetype: file.mimetype,
+    });
   },
 };
