@@ -1,19 +1,26 @@
 import type { CookieOptions, Request, Response } from 'express';
 
+import type { LoginInput, RegisterAdminInput, ResetPasswordInput } from './auth.dto';
+import { authService } from './auth.service';
+
 import { env } from '@/config/env';
 import { AppError } from '@/lib/http-error';
 
-import { authService } from './auth.service';
-import type { LoginInput, RegisterAdminInput, ResetPasswordInput } from './auth.dto';
-
 const REFRESH_COOKIE = 'bloomo_rt';
 
+// Dev (cross-port between Next.js :3000 and the API :4000) needs sameSite='lax'
+// so the refresh cookie actually rides the cross-origin POST /auth/refresh.
+// Production keeps 'strict' for CSRF defense (assumed same-origin via reverse
+// proxy or shared root domain).
 const refreshCookieOptions: CookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax',
   path: '/auth',
-  domain: env.COOKIE_DOMAIN,
+  // Omit the `domain` attribute entirely when COOKIE_DOMAIN is not set so the
+  // browser binds the cookie to the actual request host — required for LAN
+  // IPs (a literal "localhost" would be rejected against e.g. 192.168.1.5).
+  ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
   maxAge: 30 * 24 * 60 * 60 * 1000,
 };
 

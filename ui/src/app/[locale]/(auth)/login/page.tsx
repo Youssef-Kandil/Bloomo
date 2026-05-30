@@ -1,9 +1,42 @@
 'use client';
 
+import axios from 'axios';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { AlertCircle, ArrowRight, Loader2, Lock, Mail } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+
+/** First line: short, user-friendly. Distinguishes "wrong password" from
+ *  "can't reach the server" so users on LAN/IP don't get a misleading
+ *  "invalid credentials" when the actual failure is a network/CORS issue. */
+function describeLoginError(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    if (err.response) {
+      // Server responded with non-2xx → most likely truly invalid credentials
+      if (err.response.status === 401) return 'بيانات الدخول غير صحيحة';
+      if (err.response.status === 403) return 'الحساب محظور';
+      return `خطأ من السيرفر (${err.response.status})`;
+    }
+    // No response → network layer failure (CORS, DNS, unreachable, etc.)
+    return 'تعذّر الاتصال بالسيرفر';
+  }
+  return 'حدث خطأ غير متوقع';
+}
+
+/** Second line: technical details (request URL, axios code) — visible so the
+ *  user / dev can immediately see *why* the login failed without opening
+ *  devtools (critical on a phone where devtools aren't easy to reach). */
+function detailedLoginError(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    const url = err.config?.baseURL && err.config?.url ? `${err.config.baseURL}${err.config.url}` : err.config?.url ?? '';
+    if (err.response) {
+      const msg = (err.response.data as { error?: { message?: string } } | undefined)?.error?.message;
+      return msg ? `${msg} · ${url}` : `${err.message} · ${url}`;
+    }
+    return `${err.code ?? 'NETWORK_ERROR'} · ${url || err.message}`;
+  }
+  return err instanceof Error ? err.message : String(err);
+}
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,9 +115,14 @@ export default function LoginPage() {
       </div>
 
       {login.isError && (
-        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive animate-fade-in">
-          <AlertCircle className="size-4 shrink-0" />
-          <span>{t('auth.errorInvalid')}</span>
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive animate-fade-in">
+          <AlertCircle className="size-4 shrink-0 mt-0.5" />
+          <div className="space-y-0.5 min-w-0">
+            <p className="font-medium">{describeLoginError(login.error)}</p>
+            <p className="text-xs opacity-80 break-words">
+              {detailedLoginError(login.error)}
+            </p>
+          </div>
         </div>
       )}
 

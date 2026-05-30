@@ -41,9 +41,30 @@ export function createApp(): Application {
 
   app.set('trust proxy', 1);
   app.use(helmet());
+  // CORS allow-list:
+  //   - The configured FRONTEND_ORIGIN (production / staging).
+  //   - In development only: any LAN/loopback origin (localhost,
+  //     127.0.0.1, RFC1918 ranges) so the app works when accessed
+  //     over the dev machine's IP from a phone on the same network.
+  //   - Requests with no Origin header (curl, server-to-server) are allowed.
+  const lanOriginRegex =
+    /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/u;
+  const isDev = env.NODE_ENV !== 'production';
   app.use(
     cors({
-      origin: env.FRONTEND_ORIGIN,
+      origin(origin, cb) {
+        if (!origin) return cb(null, true);
+        if (origin === env.FRONTEND_ORIGIN) return cb(null, true);
+        if (isDev && lanOriginRegex.test(origin)) return cb(null, true);
+        // Log the rejection in dev so the user can see why their phone gets
+        // CORS errors (these never appear in the request logger because they
+        // fail at the OPTIONS preflight stage, before any handler runs).
+        if (isDev) {
+          // eslint-disable-next-line no-console
+          console.warn(`[CORS] Rejected origin: ${origin}`);
+        }
+        return cb(new Error(`Origin not allowed by CORS: ${origin}`));
+      },
       credentials: true,
     }),
   );

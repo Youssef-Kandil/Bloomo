@@ -2,11 +2,45 @@ import axios, { type AxiosError } from 'axios';
 
 import { tokenStore, userStore, type AuthUser } from './auth';
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+/**
+ * API origin resolution, in priority order:
+ *   1. NEXT_PUBLIC_API_URL — explicit override (production, staging).
+ *   2. Browser → empty string (same-origin). Backend is reached through the
+ *      Next.js rewrites configured in next.config.mjs: the page at
+ *      http(s)://<host>:3000 calls /auth/login → Next.js proxies to
+ *      http://localhost:4000/auth/login. This is what makes the app work
+ *      uniformly over localhost, LAN IPs, and dev HTTPS without CORS or
+ *      mixed-content traps.
+ *   3. SSR / build → http://localhost:4000 (the proxy isn't running there).
+ */
+const ENV_API_URL = process.env.NEXT_PUBLIC_API_URL;
+const SSR_FALLBACK = 'http://localhost:4000';
+
+let resolvedBaseURL: string | null = null;
+function resolveBaseURL(): string {
+  if (resolvedBaseURL !== null) return resolvedBaseURL;
+  if (ENV_API_URL) {
+    resolvedBaseURL = ENV_API_URL;
+  } else if (typeof window === 'undefined') {
+    resolvedBaseURL = SSR_FALLBACK;
+  } else {
+    resolvedBaseURL = ''; // same-origin, served via Next.js rewrites
+  }
+  return resolvedBaseURL;
+}
 
 export const api = axios.create({
-  baseURL,
+  baseURL: ENV_API_URL ?? SSR_FALLBACK, // initial value, real one is patched per-request below
   withCredentials: true, // refresh cookie
+});
+
+// Per-request baseURL: in the browser we want it derived from
+// window.location, but the axios instance is created at module init time
+// (possibly during SSR). Patching here ensures every request uses the
+// up-to-date origin without recreating the instance.
+api.interceptors.request.use((config) => {
+  config.baseURL = resolveBaseURL();
+  return config;
 });
 
 /**
@@ -18,7 +52,8 @@ export const api = axios.create({
 export function apiAssetUrl(pathOrUrl: string | null | undefined): string | undefined {
   if (!pathOrUrl) return undefined;
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-  return `${baseURL.replace(/\/$/, '')}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`;
+  const base = resolveBaseURL().replace(/\/$/, '');
+  return `${base}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`;
 }
 
 api.interceptors.request.use((config) => {
@@ -37,7 +72,7 @@ async function tryRefresh(): Promise<string | null> {
   refreshPromise = (async () => {
     try {
       const res = await axios.post(
-        `${baseURL}/auth/refresh`,
+        `${resolveBaseURL()}/auth/refresh`,
         {},
         { withCredentials: true },
       );

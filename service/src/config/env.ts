@@ -13,7 +13,10 @@ const schema = z.object({
   JWT_REFRESH_TTL: z.string().default('30d'),
 
   FRONTEND_ORIGIN: z.string().url().default('http://localhost:3000'),
-  COOKIE_DOMAIN: z.string().default('localhost'),
+  // Leave unset (or use the default empty string) to let cookies bind to the
+  // request host — necessary when accessing the dev server over a LAN IP
+  // since a hardcoded "localhost" Domain attribute would be rejected.
+  COOKIE_DOMAIN: z.string().optional(),
 
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),
